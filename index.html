@@ -361,12 +361,28 @@ body.touch .rankbox{width:220px;font-size:13px}
 .podium .p1{order:2;background:linear-gradient(180deg,#FFC83D,#C98A00);padding-top:22px}.podium .p2{order:1;background:linear-gradient(180deg,#CFD8E6,#7D8BA3)}.podium .p3{order:3;background:linear-gradient(180deg,#F0A86A,#A65A1E)}
 .rankbox .rh{white-space:nowrap}body.touch .rankbox{width:232px}body.touch .rankbox .rh small{display:none}
 
+/* ===== 이벤트 안내 바 (문제 창이 열려 있어도 보임) ===== */
+#evbarw{position:absolute;left:50%;top:108px;transform:translateX(-50%);z-index:35;pointer-events:none;width:min(640px,calc(100vw - 240px))}
+#evbarw.wp{left:100px;transform:none;width:min(560px,calc(100vw - 740px));min-width:300px}
+.evbar{display:flex;align-items:flex-start;gap:12px;padding:12px 16px;border-radius:18px;background:linear-gradient(135deg,rgba(124,58,237,.96),rgba(76,29,149,.96));border:3px solid #FFC83D;box-shadow:0 8px 24px rgba(0,0,0,.35),0 0 0 4px rgba(255,200,61,.25);color:#fff;animation:evpulse 1.6s ease-in-out infinite}
+.evbar>.ic{width:40px;height:40px;flex:none;color:#FFC83D;margin-top:2px}
+.evbar .eb{flex:1;min-width:0}.evbar b{display:flex;align-items:center;gap:8px;font-family:var(--disp);font-size:22px;letter-spacing:.02em;color:#FFE08A}
+.evbar b .t{margin-left:auto;font-family:var(--font);font-size:15px;color:#fff;background:rgba(0,0,0,.3);padding:2px 10px;border-radius:99px}
+.evbar span{display:block;font-size:16px;line-height:1.45;margin-top:2px;font-weight:600}
+.evbar .tg{font-style:normal;display:inline-block;background:#FFC83D;color:#3A2600;font-weight:800;font-size:13px;padding:1px 8px;border-radius:8px;margin-right:6px;vertical-align:1px}
+.evbar .pbar{margin-top:8px;height:12px;background:rgba(0,0,0,.35)}.evbar .pbar i{background:linear-gradient(90deg,#2EE07F,#FFC83D)}
+.evbar .gp{display:block;text-align:right;font-size:13px;font-weight:700;margin-top:2px;color:#FFE08A}
+.evbar.ok{background:linear-gradient(135deg,rgba(22,163,74,.96),rgba(21,128,61,.96));border-color:#7DFFB5;animation:none}.evbar.ok b{color:#fff}
+.evbar.warn{background:linear-gradient(135deg,rgba(180,83,9,.96),rgba(120,53,15,.96))}
+@keyframes evpulse{0%,100%{box-shadow:0 8px 24px rgba(0,0,0,.35),0 0 0 4px rgba(255,200,61,.25)}50%{box-shadow:0 8px 24px rgba(0,0,0,.35),0 0 0 9px rgba(255,200,61,.08)}}
+body.touch #evbarw{top:104px}body.touch .evbar span{font-size:15px}
+
 </style>
 </head>
 <body>
 <div id="app"></div>
 <!-- 3D 엔진 (Three.js r149, 저장소에 포함) -->
-<script>/* js/vendor/three.min.js */
+<script>
 /**
  * @license
  * Copyright 2010-2023 Three.js Authors
@@ -376,7 +392,7 @@ body.touch .rankbox{width:220px;font-size:13px}
 
 </script>
 <!-- 수학 문제 엔진 (원본 소수 원정대에서 그대로 가져옴) -->
-<script>/* js/engine/quiz.js */
+<script>
 /* 소수의 곱셈 문제 엔진 (기존 소수 원정대 QE 그대로 재사용) */
 /* =====================================================================
    소수 원정대 – 문제 엔진
@@ -969,7 +985,7 @@ if (typeof module !== 'undefined') module.exports = QE;
 
 </script>
 <!-- 사회 문제 은행 (5-2 사회 1·2단원) -->
-<script>/* js/engine/social.js */
+<script>
 /* =====================================================================
    사회 문제 엔진 (5학년 2학기 사회 1·2단원)
    1단원 「유적과 유물로 살펴본 옛 사람들의 생활」  2단원 「달라지는 시대, 변화하는 생활 모습」
@@ -1243,7 +1259,7 @@ H|2.4|or|일어난 순서대로 나열해 보세요.|훈민정음 창제;모내�
 
 </script>
 <!-- Firebase 실시간 DB 연결 (기존 sosu-fccd0 프로젝트 그대로) -->
-<script>/* js/net.js */
+<script>
 /* 실시간 네트워크 계층 (기존 NET 재사용 · Firebase 프로젝트 sosu-fccd0 그대로) + QR 생성기 */
 /* =====================================================================
    네트워크 계층 – 같은 인터페이스로 두 가지 모드 지원
@@ -1452,7 +1468,7 @@ var QR = (function () {
 if (typeof module !== 'undefined') module.exports = QR;
 
 </script>
-<script>/* js/engine/vis.js */
+<script>
 /* 시각적 계산 도구 (기존 VIS 재사용) */
 /* =====================================================================
    시각적 수학 도구 – 힌트 3단계 그림 + 도구 패널
@@ -1600,7 +1616,7 @@ var TOOLS = (function () {
 })();
 
 </script>
-<script>/* js/icons.js */
+<script>
 /* 평면 게임 UI 아이콘 (자체 제작 SVG) */
 var IC = (function () {
   'use strict';
@@ -1656,7 +1672,7 @@ var IC = (function () {
 })();
 
 </script>
-<script>/* js/sound.js */
+<script>
 /* =====================================================================
    효과음 · 배경음악 (Web Audio 합성 – 외부 소리 파일 없음, 기존 소수 원정대 합성기 재사용)
 ===================================================================== */
@@ -1705,7 +1721,7 @@ var SND = (function () {
 })();
 
 </script>
-<script>/* js/growth.js */
+<script>
 /* =====================================================================
    성장·보상 수치 (교사 설정으로 덮어쓸 수 있음) – 시뮬레이션(test/sim.js)으로 검증
 ===================================================================== */
@@ -1769,7 +1785,7 @@ var GROW = (function () {
 if (typeof module !== 'undefined') module.exports = GROW;
 
 </script>
-<script>/* js/gm.js */
+<script>
 /* =====================================================================
    PYRAMID BUILDER – 게임 규칙 (학급 전체가 하나의 피라미드를 건설)
    · 기존 소수 원정대의 비밀 학습 설정(PROFILES/CFG_DEF), 적응형 문제 선택(nextQ),
@@ -1992,18 +2008,18 @@ var GM = (function () {
 
   /* ---------- 이벤트 ---------- */
   const EVENTS = {
-    meteor: { name: '황금 운석 낙하!', icon: 'star', dur: 70000, desc: '사막에 떨어진 황금 운석으로 달려가 특별 문제를 풀면 자재를 많이 얻어요' },
-    supply: { name: '보급선 도착!', icon: 'ship', dur: 80000, desc: '학급 전체가 함께 문제를 풀어 목표를 채우면 보급 상자가 열려요' },
+    meteor: { name: '황금 운석 낙하!', icon: 'star', dur: 70000, desc: '사막에 떨어진 황금 운석으로 달려가 특별 문제를 풀면 보너스 블록을 바로 받아요' },
+    supply: { name: '보급선 도착!', icon: 'ship', dur: 80000, desc: '학급 전체가 함께 문제를 풀어 목표를 채우면 보급 상자가 열려 모두 보너스 블록을 받아요' },
     gold: { name: '황금 블록 발견!', icon: 'crown', dur: 70000, desc: '채석장의 황금 바위에서 문제를 풀면 황금 블록(한 개 = 3칸)을 얻어요' },
     oasis: { name: '오아시스의 축복!', icon: 'charm', dur: 55000, desc: '모든 건설자의 훈련 경험치가 1.5배' },
     storm: { name: '모래 폭풍!', icon: 'detector', dur: 35000, desc: '강한 모래바람 때문에 잠시 이동 속도가 느려져요' },
-    pharaoh: { name: '고대 파라오의 시험!', icon: 'sword', dur: 80000, desc: '스핑크스 앞에서 응용 문제를 풀면 특별 자재와 황금 왕관 장식을 얻어요' },
+    pharaoh: { name: '고대 파라오의 시험!', icon: 'sword', dur: 80000, desc: '스핑크스 앞에서 응용 문제를 풀면 보너스 블록과 황금 왕관 장식을 얻어요' },
     fest: { name: '황금 축제!', icon: 'cheer', dur: 75000, desc: '학급 전체가 목표만큼 문제를 풀면 보너스 건설 시간(+1분, 배치 2배)이 시작돼요' }
   };
   const EV_TYPES = Object.keys(EVENTS);
   const EM_TIERS = [
-    { k: 'great', name: '대성공', title: '황금 에너지 폭발!', color: '#3DDC84', desc: ['60초 동안 자재 획득 2배', '모든 캐릭터 스피드 보너스', '피라미드 건설 보너스'] },
-    { k: 'ok', name: '성공', title: '건설 장비 정상 작동!', color: '#38BDF8', desc: ['모두에게 추가 건설 자재', '희귀 보물상자 등장'] },
+    { k: 'great', name: '대성공', title: '황금 에너지 폭발!', color: '#3DDC84', desc: ['60초 동안 블록 2배로 캐기', '모든 캐릭터 스피드 보너스', '피라미드 건설 보너스'] },
+    { k: 'ok', name: '성공', title: '건설 장비 정상 작동!', color: '#38BDF8', desc: ['모두에게 보너스 블록 +4', '희귀 보물상자 등장'] },
     { k: 'warn', name: '주의', title: '피라미드가 흔들린다!', color: '#FFC93C', desc: ['모래 폭풍 발생', '잠시 이동 속도 감소', '다음 점검에 대비하세요!'] },
     { k: 'bad', name: '위기 발생', title: '지진 발생! 피라미드 일부 붕괴!', color: '#FF5A6E', desc: ['강한 지진', '짓고 있던 위쪽 블록 일부가 무너짐', '무너진 블록은 채석장으로 → 다시 옮겨 복구해요'] }
   ];
@@ -2076,6 +2092,7 @@ var GM = (function () {
     u[`${P}/lt`] = NET.serverTS();
     if (q.kind !== 'em') { u[`${P}/st/n`] = inc(1); if (ok) u[`${P}/st/ok`] = inc(1); if (ok && q.att === 0) u[`${P}/st/first`] = inc(1); }
     else { u[`${P}/st/emn`] = inc(1); if (ok) u[`${P}/st/emok`] = inc(1); }
+    if (R.blk) { u[`${P}/inv/carry`] = inc(R.blk); u[`${ST}/carried`] = inc(R.blk); } // 이벤트 보너스 블록은 바로 손에
     if (R.mat) { u[`${P}/inv/mat`] = inc(R.mat); u[`${P}/st/mat`] = inc(R.mat); u[`${ST}/mat`] = inc(R.mat); }
     if (R.xp && R.stat) u[`${P}/xp/${R.stat}`] = inc(R.xp);
     if (R.gold) u[`${P}/inv/gold`] = inc(R.gold);
@@ -2199,10 +2216,10 @@ var GM = (function () {
       await NET.tx(`rooms/${code}/build/n`, n => Math.min(m.total, (n || 0) + bonus));
       await news(code, `🌟 긴급 점검 대성공! (학급 정답률 ${A.acc}%) 황금 에너지 폭발!`, 'em');
     } else if (tier === 1) {
-      onlinePids(room).forEach(pid => { u[`priv/${code}/${pid}/inv/mat`] = NET.inc(6); u[`priv/${code}/${pid}/st/mat`] = NET.inc(6); });
+      onlinePids(room).forEach(pid => { u[`priv/${code}/${pid}/inv/carry`] = NET.inc(4); });
       for (let i = 0; i < 4; i++) { const a = Math.random() * Math.PI * 2, d = 18 + Math.random() * 40; u[`rooms/${code}/chests/c${NET.id(5)}`] = { x: Math.cos(a) * d, z: Math.sin(a) * d, at: now, by: '' }; }
       await NET.update('', u);
-      await news(code, `✅ 긴급 점검 성공! (학급 정답률 ${A.acc}%) 모두에게 추가 자재, 희귀 보물상자 등장!`, 'em');
+      await news(code, `✅ 긴급 점검 성공! (학급 정답률 ${A.acc}%) 모두에게 보너스 블록 +4, 희귀 보물상자 등장!`, 'em');
     } else if (tier === 2 || !m.settings.collapse || !g.collapse) {
       u[`rooms/${code}/meta/buff/storm`] = now + 45000;
       await NET.update('', u);
@@ -2236,7 +2253,7 @@ var GM = (function () {
     if (!r.committed || !success) return;
     const u = {};
     const free = m.settings.mode === 'free';
-    if (ev.type === 'supply') { onlinePids(room).forEach(pid => { if (free) u[`priv/${code}/${pid}/inv/coins`] = NET.inc(40); else { u[`priv/${code}/${pid}/inv/mat`] = NET.inc(8); u[`priv/${code}/${pid}/st/mat`] = NET.inc(8); } }); await NET.update('', u); await news(code, free ? '📦 보급 상자가 열렸어요! 모든 건설자 코인 +40' : '📦 보급 상자가 열렸어요! 모든 건설자 자재 +8', 'ev'); }
+    if (ev.type === 'supply') { onlinePids(room).forEach(pid => { if (free) u[`priv/${code}/${pid}/inv/coins`] = NET.inc(40); else u[`priv/${code}/${pid}/inv/carry`] = NET.inc(6); }); await NET.update('', u); await news(code, free ? '📦 보급 상자가 열렸어요! 모든 건설자 코인 +40' : '📦 보급 상자가 열렸어요! 모든 건설자 보너스 블록 +6', 'ev'); }
     if (ev.type === 'fest') { await NET.tx(`rooms/${code}/meta`, mm => { if (!mm) return undefined; mm.extraMs = (mm.extraMs || 0) + 60000; mm.buff = mm.buff || {}; mm.buff.fest = now + 60000; return mm; }); await news(code, '🎉 황금 축제 성공! 보너스 건설 시간 +1분, 60초 동안 배치 2배!', 'ev'); }
   }
   function pickEventType(room) { const g = GROW.merge(room.meta.settings.grow); const t = EV_TYPES.filter(x => x !== room.meta.lastEv && !(x === 'storm' && Math.random() < 0.5)); return t[Math.floor(Math.random() * t.length)]; }
@@ -2255,7 +2272,7 @@ var GM = (function () {
 })();
 
 </script>
-<script>/* js/avatar.js */
+<script>
 /* =====================================================================
    블록형 3D 아바타 – 머리·몸통·양팔·양다리가 각각 실제 3D 오브젝트
    · 커스터마이징: 피부·표정·눈·헤어(10)·머리색·상의(8)·하의(6)·신발(5)·모자(11)·액세서리(11)
@@ -2508,7 +2525,7 @@ var Avatar = (function () {
 })();
 
 </script>
-<script>/* js/editor.js */
+<script>
 /* =====================================================================
    아바타 에디터 3D 무대 – 360° 회전(드래그), 확대/축소(휠·두 손가락), 대기 애니메이션
 ===================================================================== */
@@ -2559,7 +2576,7 @@ var Editor = (function () {
 })();
 
 </script>
-<script>/* js/world.js */
+<script>
 /* =====================================================================
    3D 게임 월드 (Three.js) – 하나의 넓은 사막에 모든 시설이 걸어서 연결됨
    SPAWN 광장 · QUARRY · PYRAMID · GYM(SPEED/STRENGTH) · UPGRADES(BULK PICKUP/PLACE) · RANGE
@@ -3242,7 +3259,7 @@ var W = (function () {
 })();
 
 </script>
-<script>/* js/app.js */
+<script>
 /* =====================================================================
    PYRAMID BUILDER : MATH CLASS – 화면 흐름 · HUD · 조작 · 실시간 동기화
    모드: math(수학 학습) / free(없음 · 순수 건설 시뮬레이터)
@@ -3492,7 +3509,7 @@ var W = (function () {
       emPanel = `<div class="panel" style="margin-bottom:10px"><div class="ptitle">${IC('alert')} 긴급 안전 점검</div>${emBox}<div class="row" style="margin-top:8px"><button class="btn sm red" data-act="temnow" ${m.status !== 'play' || (em && em.ph === 'on') ? 'disabled' : ''}>🚨 지금 실행</button><span class="emhist">${hist}</span></div><p class="dim" style="font-size:13px;margin:6px 0 0">${g.thGreat}%↑ 대성공 · ${g.thOk}%↑ 성공 · ${g.thWarn}%↑ 주의 · 그 아래 위기(${m.settings.collapse && g.collapse ? `위쪽 최대 ${g.collapsePct}% 붕괴` : '붕괴 꺼짐'}) · 학생별 (맞힌 수 ÷ 받은 문제 수) 평균</p></div>`;
     }
     return `<div class="kpis"><div class="kpi"><small>건설 진행률</small><b>${pct}%</b><div class="pbar"><i style="width:${pct}%"></i></div></div><div class="kpi"><small>완성 블록</small><b>${b.n || 0}</b><small>/ ${m.total}</small></div>
-        ${free ? `<div class="kpi"><small>전체 코인 획득</small><b>${s.coins || 0}</b></div>` : `<div class="kpi"><small>전체 자재 획득</small><b>${s.mat || 0}</b></div><div class="kpi"><small>총 해결 문제</small><b>${s.solves || 0}</b><small>도전 ${s.tries || 0}</small></div><div class="kpi"><small>학급 정답률</small><b>${classAcc(r)}%</b></div>`}
+        ${free ? `<div class="kpi"><small>전체 코인 획득</small><b>${s.coins || 0}</b></div>` : `<div class="kpi"><small>총 해결 문제</small><b>${s.solves || 0}</b><small>도전 ${s.tries || 0}</small></div><div class="kpi"><small>학급 정답률</small><b>${classAcc(r)}%</b></div>`}
         <div class="kpi"><small>활동 중 학생</small><b>${on}</b><small>/ ${ps.length}명</small></div><div class="kpi"><small>운반 · 잔해</small><b>${s.carried || 0}</b><small>잔해 ${b.rub || 0}</small></div></div>
       ${emPanel}
       <div class="panel" style="margin-bottom:10px"><div class="ptitle">${IC('star')} 랜덤 이벤트 ${ev ? `<span class="chip" style="background:var(--purple)">진행 중: ${GM.EVENTS[ev.type].name} ${cd(ev.until)}${ev.goal ? ` · ${ev.prog || 0}/${ev.goal}` : ''}</span>` : ''}</div>
@@ -3516,13 +3533,13 @@ var W = (function () {
       const lv = GROW.STAT_IDS.map(k => `<span title="${ST[k].name}" style="color:${STAT_COL[k]}">${GROW.levelOf(xp[k] || 0, g).lv}</span>`).join('');
       const seg = `<div class="pseg">${[0, 1, 2].map(p => `<button class="${c.p === p ? 'on' : ''}" style="--pc:${GM.PROFILES[p].color}" data-act="tmode" data-pid="${esc(x.pid)}" data-nick="${esc(x.nick)}" data-p="${p}">${GM.PROFILES[p].short}</button>`).join('')}</div>`;
       const det = open ? `<tr class="detrow"><td colspan="11"><div class="cfgedit">${cstep(x, c, 'hb', '문제당 기본 힌트', 0, 5, '단계')}${cstep(x, c, 'hx', '게임 전체 추가 힌트', 0, 10, '개')}<div class="cf"><label>힌트 횟수 제한</label><div class="seg sm">${[[1, '제한'], [0, '무제한']].map(([v, l]) => `<button class="${c.hc === v ? 'on' : ''}" data-act="tcfg" data-pid="${esc(x.pid)}" data-nick="${esc(x.nick)}" data-k="hc" data-v="${v}">${l}</button>`).join('')}</div></div>${cstep(x, c, 'rt', '재도전 허용', 1, 6, '번')}<div class="cf"><label>시각적 계산 도구</label><div class="seg sm">${[[0, '끔'], [1, '버튼'], [2, '자동 표시']].map(([v, l]) => `<button class="${c.tool === v ? 'on' : ''}" data-act="tcfg" data-pid="${esc(x.pid)}" data-nick="${esc(x.nick)}" data-k="tool" data-v="${v}">${l}</button>`).join('')}</div></div><p class="dim" style="font-size:13px;margin:4px 0 0">${esc(P.desc)} · 긴급 점검 ${GM.emCount(c, g.emN)}문제</p></div></td></tr>` : '';
-      return `<tr><td><span class="odot ${online}"></span>${esc(x.nick)}</td><td>${seg}</td><td><b>${nOk}</b><small>/${nDone}</small></td><td>${acc == null ? '-' : acc + '%'}</td><td>${first == null ? '-' : first + '%'}</td><td>${st.hints || 0}</td><td><span class="lvmini">${lv}</span></td><td><small>자재 ${inv.mat || 0} · 운반 ${(inv.carry || 0) + (inv.gold || 0)} · 배치 ${st.placed || 0}</small></td><td><small>${st.emn ? `${st.emok || 0}/${st.emn}` : '-'}</small></td><td class="curq">${cur}</td><td>${rec}<div class="row" style="gap:4px;margin-top:2px"><button class="btn sm ghost" data-act="topen" data-pid="${esc(x.pid)}">${open ? '접기' : '세부'}</button>${q ? `<button class="btn sm ghost" data-act="tnewq" data-pid="${esc(x.pid)}">새 문제</button>` : ''}</div></td></tr>` + det;
+      return `<tr><td><span class="odot ${online}"></span>${esc(x.nick)}</td><td>${seg}</td><td><b>${nOk}</b><small>/${nDone}</small></td><td>${acc == null ? '-' : acc + '%'}</td><td>${first == null ? '-' : first + '%'}</td><td>${st.hints || 0}</td><td><span class="lvmini">${lv}</span></td><td><small>운반 ${(inv.carry || 0) + (inv.gold || 0)} · 배치 ${st.placed || 0}</small></td><td><small>${st.emn ? `${st.emok || 0}/${st.emn}` : '-'}</small></td><td class="curq">${cur}</td><td>${rec}<div class="row" style="gap:4px;margin-top:2px"><button class="btn sm ghost" data-act="topen" data-pid="${esc(x.pid)}">${open ? '접기' : '세부'}</button>${q ? `<button class="btn sm ghost" data-act="tnewq" data-pid="${esc(x.pid)}">새 문제</button>` : ''}</div></td></tr>` + det;
     }).join('');
     return `<div class="panel"><div class="ptitle">${IC('hint')} 학생별 학습 설정 <small class="dim" style="font-family:var(--font);font-size:14px">학생 화면에는 절대 표시되지 않아요</small></div>
       ${m.settings.secret === false ? '<div class="wrongbox" style="animation:none;margin-bottom:8px">개인별 비밀 난이도가 꺼져 있어 모두 기본 난이도로 풀어요. (게임 설정 탭에서 켤 수 있어요)</div>' : ''}
       <div class="row" style="gap:8px;margin-bottom:8px"><button class="btn sm purple" data-act="tloadprof">지난 수업 설정 불러오기</button><button class="btn sm ghost" data-act="tbulk" data-p="0">모두 학습 지원</button><button class="btn sm ghost" data-act="tbulk" data-p="1">모두 기본</button><button class="btn sm ghost" data-act="tbulk" data-p="2">모두 도전</button></div>
       <div class="legend">${SOC() ? '<span class="rec r0">학습 지원</span> 쉬운 문제·OX·3지선다, 힌트 무제한, 재도전 5번, 점검 문제 60% <span class="rec r1">기본</span> 교과서 수준 4지선다 <span class="rec r2">도전</span> 자료 해석·까닭 추론·시대 순서' : '<span class="rec r0">학습 지원</span> 기초 계산, 힌트 무제한, 그림 도구 자동, 재도전 5번, 점검 문제 60% <span class="rec r1">기본</span> 교과서 수준 <span class="rec r2">도전</span> 여러 단계·오류 찾기·추론'} · Lv: <span style="color:${STAT_COL.spd}">스피드</span>·<span style="color:${STAT_COL.str}">근력</span>·<span style="color:${STAT_COL.bpu}">수집</span>·<span style="color:${STAT_COL.bpl}">배치</span>·<span style="color:${STAT_COL.rng}">범위</span></div>
-      <div class="tlearnwrap"><table class="tlearn"><tr><th>학생</th><th>학습 설정</th><th>해결</th><th>정답률</th><th>첫 시도</th><th>힌트</th><th>Lv</th><th>자재·운반·배치</th><th>긴급</th><th>지금 푸는 문제</th><th>도움</th></tr>${rows}</table></div></div>`;
+      <div class="tlearnwrap"><table class="tlearn"><tr><th>학생</th><th>학습 설정</th><th>해결</th><th>정답률</th><th>첫 시도</th><th>힌트</th><th>Lv</th><th>운반·배치</th><th>긴급</th><th>지금 푸는 문제</th><th>도움</th></tr>${rows}</table></div></div>`;
   }
   const cstep = (x, c, k, label, min, max, unit) => `<div class="cf"><label>${label}</label><div class="num-step"><button class="btn sm ghost" data-act="tcfg" data-pid="${esc(x.pid)}" data-nick="${esc(x.nick)}" data-k="${k}" data-v="${Math.max(min, c[k] - 1)}">−</button><b>${c[k]}${unit}</b><button class="btn sm ghost" data-act="tcfg" data-pid="${esc(x.pid)}" data-nick="${esc(x.nick)}" data-k="${k}" data-v="${Math.min(max, c[k] + 1)}">＋</button></div></div>`;
   function cfgHTML() {
@@ -3531,9 +3548,9 @@ var W = (function () {
     const tg = (k, label) => { const v = st[k] !== false; return `<div class="cf"><label>${label}</label><div class="seg sm"><button class="${v ? 'on' : ''}" data-act="tset" data-k="${k}" data-v="1">켬</button><button class="${!v ? 'on' : ''}" data-act="tset" data-k="${k}" data-v="0">끔</button></div></div>`; };
     return `<div class="panel"><div class="ptitle">${IC('gear')} 게임 설정 <small class="dim" style="font-family:var(--font);font-size:14px">학습 모드(${MODE_LBL[modeOf(m)]})는 방을 만들 때 확정돼요 · 아래 수치는 바로 적용</small></div>
       <div class="cfgg">${free ? tg('randEv', '랜덤 이벤트') : tg('secret', '개인별 비밀 난이도') + tg('hints', '힌트 제공') + tg('randEv', '랜덤 이벤트') + tg('collapse', '피라미드 붕괴 이벤트')}${tg('rank', '기여도 랭킹 표시')}${(st.roster || []).length ? tg('rosterOnly', '명단에 있는 학생만 입장') : ''}</div>
-      <h3>성장</h3><div class="cfgg">${num('xp0', '첫 레벨업 필요 경험치', 3, 60)}${num('xpInc', '레벨마다 추가 경험치', 0, 40)}${num('maxLv', '최대 레벨', 3, 12)}${free ? num('coinBlock', '블록 1개 코인', 1, 10) + num('upBase', '업그레이드 첫 가격', 5, 200) + num('upMul', '가격 증가 배율', 1, 3, 0.05) + num('repXp', '운동 1회 경험치', 1, 10) : num('xpBase', '정답 기본 경험치', 1, 40) + num('xpFirst', '첫 시도 보너스', 0, 20) + num('xpApp', '응용 문제 보너스', 0, 20) + num('xpAcc', '최근 80%↑ 보너스', 0, 20) + num('xpFail', '끝까지 도전 경험치', 0, 20) + num('matBase', '정답 기본 자재', 1, 20) + num('matFirst', '첫 시도 보너스 자재', 0, 10) + num('matStreak', '3연속 보너스 자재', 0, 10) + num('matFail', '끝까지 도전 자재', 0, 10)}</div>
+      <h3>성장</h3><div class="cfgg">${num('xp0', '첫 레벨업 필요 경험치', 3, 60)}${num('xpInc', '레벨마다 추가 경험치', 0, 40)}${num('maxLv', '최대 레벨', 3, 12)}${free ? num('coinBlock', '블록 1개 코인', 1, 10) + num('upBase', '업그레이드 첫 가격', 5, 200) + num('upMul', '가격 증가 배율', 1, 3, 0.05) + num('repXp', '운동 1회 경험치', 1, 10) : num('xpBase', '정답 기본 경험치', 1, 40) + num('xpFirst', '첫 시도 보너스', 0, 20) + num('xpApp', '응용 문제 보너스', 0, 20) + num('xpAcc', '최근 80%↑ 보너스', 0, 20) + num('xpFail', '끝까지 도전 경험치', 0, 20)}</div>
       <h3>레벨별 능력치 표 (Lv.1부터, 쉼표로 구분)</h3><div class="col">${GROW.STAT_IDS.map(k => `<div class="row"><b style="width:150px;color:${STAT_COL[k]}">${ST[k].name} (${ST[k].unit})</b><input class="tblin grow" type="text" value="${g.tables[k].join(', ')}" data-tbl="${k}"></div>`).join('')}</div>
-      ${free ? '' : `<h3>긴급 안전 점검</h3><div class="cfgg">${num('emN', '문제 수', 3, 20)}${num('emDur', '제한 시간(초)', 45, 400, 5)}${num('emGap', '간격(분)', 2, 20)}${num('emFirst', '첫 점검(분)', 1, 30)}${num('emMat', '정답 1개당 자재', 0, 10)}${num('emXp', '정답 1개당 경험치', 0, 20)}${num('thGreat', '대성공 기준(%)', 50, 100)}${num('thOk', '성공 기준(%)', 30, 100)}${num('thWarn', '주의 기준(%)', 0, 100)}${num('collapsePct', '붕괴 규모(%)', 1, 20)}${num('bonusPct', '대성공 보너스(0~0.2)', 0, 0.2, 0.01)}</div>`}
+      ${free ? '' : `<h3>긴급 안전 점검</h3><div class="cfgg">${num('emN', '문제 수', 3, 20)}${num('emDur', '제한 시간(초)', 45, 400, 5)}${num('emGap', '간격(분)', 2, 20)}${num('emFirst', '첫 점검(분)', 1, 30)}${num('emXp', '정답 1개당 경험치', 0, 20)}${num('thGreat', '대성공 기준(%)', 50, 100)}${num('thOk', '성공 기준(%)', 30, 100)}${num('thWarn', '주의 기준(%)', 0, 100)}${num('collapsePct', '붕괴 규모(%)', 1, 20)}${num('bonusPct', '대성공 보너스(0~0.2)', 0, 0.2, 0.01)}</div>`}
       <h3>랜덤 이벤트</h3><div class="cfgg">${num('evGap', '간격(분)', 1, 10, 0.1)}</div>
       ${m.status === 'lobby' ? `<h3>피라미드 크기 (시작 전에만)</h3><div class="row"><input type="number" min="0" max="12000" value="${st.target || 0}" id="ttarget" style="width:140px"><button class="btn sm" data-act="ttarget">적용</button><span class="dim">지금 ${m.total}블록 (${m.N}×${m.N}) · 0 = 자동</span></div>` : ''}
       <div class="row" style="margin-top:14px"><button class="btn green" data-act="tsavecfg">${IC('save')} 저장</button><button class="btn sm ghost" data-act="tresetcfg">기본값으로</button></div></div>`;
@@ -3670,7 +3687,7 @@ var W = (function () {
   function enterWorld(rejoin) {
     show('game', `<div class="g3" id="g3">
       <div class="topbar"><button class="menubtn" data-act="drawer" data-d="settings" title="설정">${IC('gear')}</button><span class="pill tm" id="hudtime">--:--</span><div class="pyrprog" id="pyrprog"></div><div class="netpill" id="netpill"></div></div>
-      <div class="buffs" id="buffs"></div>
+      <div class="buffs" id="buffs"></div><div id="evbarw"></div>
       <div class="sidebtns"><button class="sbtn q" data-act="drawer" data-d="quest">${IC('flag')}퀘스트</button><button class="sbtn c" data-act="drawer" data-d="stats">${IC('user')}캐릭터</button><button class="sbtn t" data-act="drawer" data-d="train">${IC('muscle')}훈련</button><button class="sbtn h" data-act="drawer" data-d="help">${IC('help')}도움말</button></div>
       <div class="mapbox"><canvas class="mmap" id="mmap" width="312" height="312"></canvas><div class="garrow" id="garrow"><i></i><span></span></div><div id="rankw"></div><div id="evcard"></div></div>
       <div class="statbar" id="statbar"></div>
@@ -3759,23 +3776,40 @@ var W = (function () {
     const m = meta(), st = m.status, lb = $('#lobbyban');
     if (st === 'lobby') { if (!lb) $('#g3').insertAdjacentHTML('beforeend', `<div class="lobbyban glass" id="lobbyban"><span class="disp">WAITING PLAZA</span>${esc(S.me.nick)} 건설자, 대기 광장에 도착했어요!<br>선생님이 <b>게임 시작</b>을 누르면 사막 전체로 나갈 수 있어요<span class="waitdots"></span></div>`); }
     else if (lb) lb.remove();
-    if (st !== 'lobby' && !S.seen.started) { S.seen.started = 1; SND.bgm('desert'); if (NET.now() - (m.startAt || 0) < 8000) { sx.fanfare(); banner(`${IC('play', 'huge')}<div class="big">GAME START!</div><div class="sm">${FREE() ? '채석장에서 블록을 캐서 → 피라미드에 쌓고 → 코인으로 업그레이드!' : '헬스장에서 문제를 풀어 자재를 얻고 → 채석장에서 블록을 캐고 → 피라미드에 쌓아요!'}</div>`, 3600, { confetti: true }); W.burst(W.me.x, W.me.y + 1, W.me.z, 80, [0x4FC3F7, 0xFFFFFF], 9); } }
+    if (st !== 'lobby' && !S.seen.started) { S.seen.started = 1; SND.bgm('desert'); if (NET.now() - (m.startAt || 0) < 8000) { sx.fanfare(); banner(`${IC('play', 'huge')}<div class="big">GAME START!</div><div class="sm">${FREE() ? '채석장에서 블록을 캐서 → 피라미드에 쌓고 → 코인으로 업그레이드!' : '헬스장에서 문제를 풀어 능력치를 키우고 → 채석장에서 블록을 캐서 → 피라미드에 쌓아요!'}</div>`, 3600, { confetti: true }); W.burst(W.me.x, W.me.y + 1, W.me.z, 80, [0x4FC3F7, 0xFFFFFF], 9); } }
     const po = $('#pauseov'), paused = st === 'paused';
     if (paused && !po) { const d = document.createElement('div'); d.id = 'pauseov'; d.className = 'fx'; d.style.pointerEvents = 'auto'; d.style.background = 'rgba(0,0,0,.65)'; d.innerHTML = `<div class="fxban">${IC('pause', 'huge')}<div class="big">PAUSED</div><div class="sm">선생님 말씀을 들어요. 시간도 함께 멈춰 있어요.</div></div>`; document.body.appendChild(d); }
     else if (!paused && po) po.remove();
     if (st === 'ended' && !S.seen.finalShown) { S.seen.finalShown = 1; closePanel(); const win = m.result === 'win'; if (win) { SND.bgm('win'); sx.fanfare(); confetti(160); } else { SND.bgm('lobby'); sx.horn(); } if (!win) setTimeout(() => { const l = $('#layer'); if (l) l.insertAdjacentHTML('beforeend', `<div class="final3" id="final3">${finalPanelHTML('student')}</div>`); }, 1500); else setTimeout(() => { const l = $('#layer'); if (l && !$('#final3') && !S.finaleOn) l.insertAdjacentHTML('beforeend', `<div class="final3" id="final3">${finalPanelHTML('student')}</div>`); }, 30000); }
     W.me.lock = !!(S.panel || S.emActive || paused || st === 'ended');
   }
+  const E_MAXAGE = 200000;
   function handleEvFx() {
     const m = meta(), now = NET.now(), ev = m.ev, free = FREE();
     if (ev && ev.until > now && !S.seen['ev:' + ev.id]) { const first = S.seen.evPrimed === undefined; S.seen['ev:' + ev.id] = 1; if (!first && now - ev.at < 20000) { const E = GM.EVENTS[ev.type]; sx.horn(); banner(`${IC('star', 'huge')}<div class="big">${E.name}</div><div class="sm">${free ? freeEvDesc(ev.type) : E.desc}${ev.goal ? `<br>목표: 학급 전체 ${free ? '블록' : '정답'} <b>${ev.goal}개</b>` : ''}</div>`, 3800, { confetti: ev.type !== 'storm' }); } }
-    if (ev && ev.done === 'ok' && !S.seen['evok:' + ev.id]) { S.seen['evok:' + ev.id] = 1; if (S.seen.evPrimed !== undefined) { sx.chest(); banner(ev.type === 'supply' ? `${IC('gift', 'huge')}<div class="big">보급 상자 개방!</div><div class="sm">모든 건설자에게 ${free ? '코인 +40' : '자재 +8'}</div>` : `${IC('star', 'huge')}<div class="big">황금 축제 성공!</div><div class="sm">보너스 시간 +1분 · 60초 동안 배치 2배!</div>`, 3200, { confetti: true }); } }
+    if (ev && ev.done === 'ok' && !S.seen['evok:' + ev.id]) { S.seen['evok:' + ev.id] = 1; if (S.seen.evPrimed !== undefined) { sx.chest(); banner(ev.type === 'supply' ? `${IC('gift', 'huge')}<div class="big">보급 상자 개방!</div><div class="sm">모든 건설자에게 ${free ? '코인 +40' : '보너스 블록 +6 (바로 손에!)'}</div>` : `${IC('star', 'huge')}<div class="big">황금 축제 성공!</div><div class="sm">보너스 시간 +1분 · 60초 동안 배치 2배!</div>`, 3200, { confetti: true }); } }
+    if (ev && ev.done === 'end' && (ev.type === 'supply' || ev.type === 'fest') && !S.seen['evend:' + ev.id]) { S.seen['evend:' + ev.id] = 1; if (S.seen.evPrimed !== undefined && now - ev.at < E_MAXAGE) banner(`${IC('alert', 'huge')}<div class="big">${ev.type === 'supply' ? '보급선이 떠났어요' : '황금 축제 종료'}</div><div class="sm">아쉽게 목표(${ev.prog || 0} / ${ev.goal})를 못 채웠어요. 다음 이벤트에 도전해요!</div>`, 3000); }
     S.seen.evPrimed = 1;
   }
-  function buffChips(m) {
+  /* 이벤트마다 '지금 무엇을 하면 되는지' 한 줄로 */
+  function evHow(ev, free) {
+    const t = ev.type, goal = ev.goal || 0;
+    if (free) return ({ meteor: ['GO', '지도의 ★ 황금 운석으로 달려가서 E → 코인 +30'], supply: ['BUILD', `블록을 피라미드에 쌓아요 · 반 전체 ${goal}개를 채우면 모두 코인 +40`], gold: ['GO', '채석장 옆 황금 바위로 가서 E → 황금 블록 2개'], oasis: ['TRAIN', '지금 헬스장에서 운동하면 경험치 1.5배!'], storm: ['WAIT', '모래 폭풍! 잠깐 느려져요. 하던 일을 계속해요'], pharaoh: ['GO', '스핑크스 앞으로 가서 E → 코인 +25 · 황금 왕관'], fest: ['BUILD', `블록을 쌓아요 · 반 전체 ${goal}개를 채우면 +1분 · 배치 2배`] })[t];
+    return ({ meteor: ['GO', '지도의 ★ 황금 운석으로 달려가서 E → 특별 문제를 맞히면 보너스 블록 8개!'], supply: ['SOLVE', `기구 앞에서 E → 문제를 맞혀요 · 정답 1개 = 1칸 · 반 전체 ${goal}개를 채우면 모두 보너스 블록 +6`], gold: ['GO', '채석장 옆 황금 바위로 가서 E → 문제를 맞히면 황금 블록 2개(1개 = 3칸)'], oasis: ['SOLVE', '지금 문제를 맞히면 경험치 1.5배!'], storm: ['WAIT', '모래 폭풍! 잠깐 느려져요. 하던 일을 계속해요'], pharaoh: ['GO', '스핑크스 앞으로 가서 E → 응용 문제를 맞히면 보너스 블록 + 황금 왕관'], fest: ['SOLVE', `기구 앞에서 문제를 맞혀요 · 반 전체 정답 ${goal}개를 채우면 +1분 · 배치 2배`] })[t];
+  }
+  function evBarHTML(m) {
+    const now = NET.now(), ev = m.ev, free = FREE(); if (!ev || ev.until <= now || m.status !== 'play') return '';
+    const E = GM.EVENTS[ev.type], mine = S.priv && (S.priv.evd || {})[ev.id];
+    if (ev.done === 'ok') return `<div class="evbar ok">${IC('gift')}<div class="eb"><b>${E.name.replace('!', '')} 성공!</b><span>${ev.type === 'supply' ? (free ? '모두 코인 +40을 받았어요' : '모두 보너스 블록 +6을 받았어요') : '보너스 시간 +1분 · 배치 2배!'}</span></div></div>`;
+    if (ev.done) return '';
+    const [tag, how] = evHow(ev, free), left = Math.max(0, Math.ceil((ev.until - now) / 1000));
+    const done = mine && ['meteor', 'gold', 'pharaoh'].includes(ev.type);
+    return `<div class="evbar ${ev.type === 'storm' ? 'warn' : ''}">${IC(ev.type === 'supply' ? 'gift' : ev.type === 'storm' ? 'alert' : 'star')}<div class="eb"><b>${E.name} <small class="t">${left}초</small></b><span>${done ? '이 이벤트 보상은 받았어요! 하던 일을 계속해요' : `<i class="tg">${{ GO: '이동', SOLVE: '문제', BUILD: '쌓기', TRAIN: '운동', WAIT: '기다림' }[tag]}</i>${how}`}</span>${ev.goal ? `<div class="pbar"><i style="width:${Math.min(100, (ev.prog || 0) / ev.goal * 100)}%"></i></div><small class="gp">반 전체 ${ev.prog || 0} / ${ev.goal}</small>` : ''}</div></div>`;
+  }
+  function buffChips(m, noEv) {
     const b = GM.buffs(m), now = NET.now(), out = [];
-    if (b.x2) out.push(`<span class="buff g">자재 2배 ${fmtT(m.buff.x2 - now)}</span>`); if (b.spdUp) out.push(`<span class="buff b">SPEED UP</span>`); if (b.storm) out.push(`<span class="buff r">모래 폭풍 · 느려짐</span>`); if (b.oasis) out.push(`<span class="buff g">경험치 1.5배</span>`); if (b.fest) out.push(`<span class="buff y">배치 2배 ${fmtT(m.buff.fest - now)}</span>`);
-    if (b.ev && !['storm', 'oasis'].includes(b.ev.type)) out.push(`<span class="buff y">${GM.EVENTS[b.ev.type].name} ${fmtT(b.ev.until - now)}${b.ev.goal ? ` · ${b.ev.prog || 0}/${b.ev.goal}` : ''}</span>`);
+    if (b.x2) out.push(`<span class="buff g">블록 2배 캐기 ${fmtT(m.buff.x2 - now)}</span>`); if (b.spdUp) out.push(`<span class="buff b">SPEED UP</span>`); if (b.storm) out.push(`<span class="buff r">모래 폭풍 · 느려짐</span>`); if (b.oasis) out.push(`<span class="buff g">경험치 1.5배</span>`); if (b.fest) out.push(`<span class="buff y">배치 2배 ${fmtT(m.buff.fest - now)}</span>`);
+    if (!noEv && b.ev && !['storm', 'oasis'].includes(b.ev.type)) out.push(`<span class="buff y">${GM.EVENTS[b.ev.type].name} ${fmtT(b.ev.until - now)}${b.ev.goal ? ` · ${b.ev.prog || 0}/${b.ev.goal}` : ''}</span>`);
     return out.join('');
   }
   /* ----- 기여도 랭킹 (쌓은 블록 수) ----- */
@@ -3795,15 +3829,16 @@ var W = (function () {
     const marks = lay.zoneStart.slice(1).map(s => s < lay.total ? `<s style="left:${s / lay.total * 100}%"></s>` : '').join('');
     const pp = `<div class="pt"><span>${IC('pyramid')} 우리 반 피라미드 · ${n >= m.total ? '완성!' : GM.ZONES[L.zone] + ' ' + (L.k + 1) + '/' + lay.layers.length + '층'}</span><b>${pct}%</b><span>${n} / ${m.total}</span></div><div class="pbar"><i style="width:${Math.min(100, pct)}%"></i>${marks}</div>`;
     if (S.sig.pp !== pp) { $('#pyrprog').innerHTML = pp; S.sig.pp = pp; }
-    const bf = buffChips(m); if (S.sig.bf !== bf) { $('#buffs').innerHTML = bf; S.sig.bf = bf; }
+    const bf = buffChips(m, true); if (S.sig.bf !== bf) { $('#buffs').innerHTML = bf; S.sig.bf = bf; }
     renderNet();
     const iv = inv(), cap = statV('str'), carry = (iv.carry || 0) + (iv.gold || 0);
     const sb = `<div class="sbox carry">${IC('block')}<div><b>${carry}<span style="font-size:18px;opacity:.7">/${cap}</span></b><small>운반 중${iv.gold ? ` · 황금 ${iv.gold}` : ''}</small></div></div>
-      ${free ? `<div class="sbox coin">${IC('coin')}<div><b>${iv.coins || 0}</b><small>코인</small></div></div>` : `<div class="sbox mat">${IC('hammer')}<div><b>${iv.mat || 0}</b><small>확보 자재</small></div></div>`}
+      ${free ? `<div class="sbox coin">${IC('coin')}<div><b>${iv.coins || 0}</b><small>코인</small></div></div>` : `<div class="sbox mat">${IC('check')}<div><b>${((S.priv && S.priv.st) || {}).ok || 0}</b><small>맞힌 문제</small></div></div>`}
       <div class="lvchips">${GROW.STAT_IDS.map(k => { const l = myLv(k); return `<div class="lvc" style="color:${STAT_COL[k]}" title="${ST[k].name}">${IC(ST[k].icon)}<b>${l.lv}</b><small>${ST[k].en.split(' ').pop()}</small><span class="xb"><i style="width:${l.need ? Math.round(l.cur / l.need * 100) : 100}%;background:${STAT_COL[k]}"></i></span></div>`; }).join('')}</div>`;
     if (S.sig.sb !== sb) { $('#statbar').innerHTML = sb; S.sig.sb = sb; }
     const rk = m.status === 'lobby' ? '' : rankHTML(r); if (S.sig.rk !== rk) { $('#rankw').innerHTML = rk; S.sig.rk = rk; }
-    const ev = m.ev && m.ev.until > NET.now() && !m.ev.done ? m.ev : null, ec = ev ? `<div class="glass evcard"><b>${GM.EVENTS[ev.type].name}</b>${free ? freeEvDesc(ev.type) : GM.EVENTS[ev.type].desc}${ev.goal ? `<div class="pbar"><i style="width:${Math.min(100, (ev.prog || 0) / ev.goal * 100)}%"></i></div>${ev.prog || 0} / ${ev.goal}` : ''}</div>` : '';
+    const eb = evBarHTML(m); if (S.sig.eb !== eb) { $('#evbarw').innerHTML = eb; S.sig.eb = eb; } const ebEl = $('#evbarw'); if (ebEl) ebEl.classList.toggle('wp', !!S.panel);
+    const ev = null, ec = ev ? `<div class="glass evcard"><b>${GM.EVENTS[ev.type].name}</b>${free ? freeEvDesc(ev.type) : GM.EVENTS[ev.type].desc}${ev.goal ? `<div class="pbar"><i style="width:${Math.min(100, (ev.prog || 0) / ev.goal * 100)}%"></i></div>${ev.prog || 0} / ${ev.goal}` : ''}</div>` : '';
     if (S.sig.ec !== ec) { $('#evcard').innerHTML = ec; S.sig.ec = ec; }
   }
   /* ----- 매 프레임 ----- */
@@ -3842,7 +3877,8 @@ var W = (function () {
     else if (ev && ev.type === 'gold' && d(P.goldRock[0], P.goldRock[1]) < 7) { kind = 'gold'; anchor = [P.goldRock[0], 5.5, P.goldRock[1]]; }
     if (!kind) { const ch = S.room.chests || {}; const id = Object.keys(ch).find(k => !ch[k].by && d(ch[k].x, ch[k].z) < 3.8); if (id) { kind = 'chest'; info.id = id; anchor = [ch[id].x, 2.6, ch[id].z]; } }
     if (!kind) { const mc = W.nearestMachine(3); if (mc) { kind = 'train'; info.m = mc; anchor = [mc.x, mc.y + 3, mc.z]; } }
-    if (!kind && d(P.quarry[0], P.quarry[1]) < W.QUARRY_R) { kind = 'mine'; anchor = [me.x, me.y + Avatar.HEIGHT + 1.2, me.z]; }
+    const stackH = Math.ceil(Math.min(40, (iv.carry || 0) + (iv.gold || 0)) / 4) * 0.52; // 머리 위 블록 더미 위로 안내 표시
+    if (!kind && d(P.quarry[0], P.quarry[1]) < W.QUARRY_R) { kind = 'mine'; anchor = [me.x, me.y + Avatar.HEIGHT + 1.2 + stackH, me.z]; }
     const carry = (iv.carry || 0) + (iv.gold || 0), dist = W.distToBuild(me.x, me.y, me.z), rng = statV('rng');
     S.ctx = { kind, info, anchor, canPlace: carry > 0 && dist <= rng, dist, rng, carry, ev };
     const be = $('#btnE'), bq = $('#btnQ'); if (be) be.classList.toggle('dis', !kind); if (bq) bq.classList.toggle('dis', !S.ctx.canPlace);
@@ -3853,11 +3889,11 @@ var W = (function () {
     if (!(S.panel || S.emActive || m.status !== 'play') && c.anchor) {
       const iv = inv(), rub = (S.room.build || {}).rub || 0, cap = statV('str'), free = FREE(); let k = 'E', a = '', s = '', cls = '';
       if (c.kind === 'train') { const st = c.info.m.stat; a = free ? (st === 'spd' || st === 'str' ? `${ST[st].en} 운동하기` : `${ST[st].en} 업그레이드`) : `${ST[st].en} 훈련하기`; s = free ? (st === 'spd' || st === 'str' ? 'E를 누를 때마다 1회 운동' : `${GROW.upCost(myLv(st).lv, G())}코인`) : `${ST[st].machine} · 문제를 풀어 성장`; }
-      else if (c.kind === 'mine') { if (c.carry >= cap) { a = '더 들 수 없어요'; s = `${c.carry}/${cap} · 피라미드로!`; cls = 'warn'; k = '!'; } else if (free || (iv.mat || 0) + rub > 0) { a = `블록 캐기 ×${Math.min(statV('bpu'), cap - c.carry)}`; s = free ? '채석장 돌은 무한!' : `자재 ${iv.mat || 0}${rub ? ` · 잔해 ${rub}` : ''}`; } else { a = '자재가 없어요'; s = '헬스장에서 문제를 풀어요'; cls = 'warn'; k = '!'; } }
-      else if (c.kind === 'meteor') { a = '황금 운석'; s = free ? '코인 +30' : '특별 문제 도전'; } else if (c.kind === 'pharaoh') { a = '파라오의 시험'; s = free ? '코인 +25 · 황금 왕관' : '응용 문제 도전'; } else if (c.kind === 'gold') { a = '황금 블록'; s = free ? '황금 블록 2개' : '문제를 풀어 획득'; } else if (c.kind === 'chest') { a = '보물상자 열기'; s = free ? '코인 +30' : '자재 +12'; }
+      else if (c.kind === 'mine') { if (c.carry >= cap) { a = '더 들 수 없어요'; s = `${c.carry}/${cap} · 피라미드로!`; cls = 'warn'; k = '!'; } else { const x2 = GM.buffs(m).x2 ? 2 : 1; a = `블록 캐기 ×${Math.min(statV('bpu') * x2, cap - c.carry)}`; s = x2 > 1 ? '대성공 보너스: 2배로 캐요!' : '채석장 돌은 무한!'; } }
+      else if (c.kind === 'meteor') { a = '황금 운석'; s = free ? '코인 +30' : '특별 문제 도전'; } else if (c.kind === 'pharaoh') { a = '파라오의 시험'; s = free ? '코인 +25 · 황금 왕관' : '응용 문제 도전'; } else if (c.kind === 'gold') { a = '황금 블록'; s = free ? '황금 블록 2개' : '문제를 풀어 획득'; } else if (c.kind === 'chest') { a = '보물상자 열기'; s = free ? '코인 +30' : '보너스 블록 +6'; }
       out.push({ p: c.anchor, k, a, s, cls });
     }
-    if (!(S.panel || S.emActive || m.status !== 'play') && c.carry > 0 && (c.canPlace || c.dist < 25)) { const me = W.me; out.push({ p: [me.x, me.y + Avatar.HEIGHT + (out.length ? 2.6 : 1.2), me.z], k: c.canPlace ? 'Q' : '!', a: c.canPlace ? `블록 놓기 ×${Math.min(c.carry, statV('bpl'))}` : '피라미드에 더 가까이', s: c.canPlace ? '초록 칸에 쌓여요' : `${c.dist.toFixed(1)}m / 범위 ${c.rng}m`, cls: c.canPlace ? 'place' : 'warn' }); }
+    if (!(S.panel || S.emActive || m.status !== 'play') && c.carry > 0 && (c.canPlace || c.dist < 25)) { const me = W.me; const sh = Math.ceil(Math.min(40, c.carry) / 4) * 0.52; out.push({ p: [me.x, me.y + Avatar.HEIGHT + sh + (out.length ? 2.6 : 1.2), me.z], k: c.canPlace ? 'Q' : '!', a: c.canPlace ? `블록 놓기 ×${Math.min(c.carry, statV('bpl'))}` : '피라미드에 더 가까이', s: c.canPlace ? '초록 칸에 쌓여요' : `${c.dist.toFixed(1)}m / 범위 ${c.rng}m`, cls: c.canPlace ? 'place' : 'warn' }); }
     const html = out.map((o, i) => `<div class="pp ${o.cls}" data-i="${i}"><kbd>${o.k}</kbd><div><span class="pa">${o.a}</span><span class="ps">${o.s}</span></div></div>`).join('');
     if (S.sig.pps !== html) { box.innerHTML = html; S.sig.pps = html; }
     const els = box.children; out.forEach((o, i) => { const el = els[i]; if (!el) return; const pr = W.project(o.p[0], o.p[1], o.p[2]); el.style.display = pr.vis ? '' : 'none'; el.style.left = Math.max(110, Math.min(innerWidth - 110, pr.x)) + 'px'; el.style.top = Math.max(120, Math.min(innerHeight - 110, pr.y)) + 'px'; });
@@ -3865,10 +3901,10 @@ var W = (function () {
   function guideTarget() {
     const iv = inv(), P = W.POS, carry = (iv.carry || 0) + (iv.gold || 0), rub = (S.room.build || {}).rub || 0, ev = S.ctx.ev, free = FREE();
     if (S.guide) return S.guide;
+    if (ev && !(S.priv && (S.priv.evd || {})[ev.id]) && meta().status === 'play') { if (ev.type === 'meteor') return { x: ev.x, z: ev.z, name: '황금 운석' }; if (ev.type === 'gold') return { x: P.goldRock[0], z: P.goldRock[1], name: '황금 바위' }; if (ev.type === 'pharaoh') return { x: P.sphinx[0], z: P.sphinx[1], name: '스핑크스' }; }
     if (meta().status === 'lobby') return { x: P.spawn[0], z: P.spawn[1], name: '대기 광장' };
     if (carry > 0) return { x: 0, z: 0, name: 'PYRAMID' };
-    if (free || (iv.mat || 0) + rub > 0) return { x: P.quarry[0], z: P.quarry[1], name: 'QUARRY' };
-    if (ev && ev.type === 'meteor') return { x: ev.x, z: ev.z, name: '황금 운석' };
+    return { x: P.quarry[0], z: P.quarry[1], name: 'QUARRY' };
     return { x: P.gym[0], z: P.gym[1], name: 'GYM' };
   }
   function drawMap() {
@@ -3902,9 +3938,8 @@ var W = (function () {
   async function mine() {
     if (S.busy) return; const iv = inv(), cap = statV('str'), carry = (iv.carry || 0) + (iv.gold || 0), rub = (S.room.build || {}).rub || 0, free = FREE();
     if (carry >= cap) return toast(`더 들 수 없어요! (${carry}/${cap}) ${free ? '헬스장 벤치프레스' : 'STRENGTH 훈련'}으로 근력을 키우면 더 많이 들 수 있어요.`);
-    if (!free && (iv.mat || 0) + rub <= 0) return toast('확보한 자재가 없어요! 헬스장에서 문제를 풀면 자재를 얻어요.');
     S.busy = true; W.doAct('mine', 0.75); setTimeout(() => sx.pick(), 260);
-    try { const res = await GM.pickup(S.code, S.me.key, Math.min(statV('bpu'), cap - carry), cap, S.room, free); if (res.got) { W.popText(W.me.x, W.me.y + Avatar.HEIGHT + 1.6, W.me.z, `+${res.got}`, '#FFE08A'); W.burst(W.me.x, W.me.y + 1, W.me.z, 14, [0xE2C38C, 0xFFE27A], 4); } else toast(res.reason === 'full' ? '더 들 수 없어요!' : '자재가 부족해요.'); }
+    try { const x2 = GM.buffs(meta()).x2 ? 2 : 1, res = await GM.pickup(S.code, S.me.key, Math.min(statV('bpu') * x2, cap - carry), cap, S.room, true); if (res.got) { W.popText(W.me.x, W.me.y + Avatar.HEIGHT + 1.6, W.me.z, `+${res.got}`, '#FFE08A'); W.burst(W.me.x, W.me.y + 1, W.me.z, 14, [0xE2C38C, 0xFFE27A], 4); } else toast('더 들 수 없어요! 피라미드로 가서 Q로 놓아요.'); }
     catch (e) { console.warn(e); toast('네트워크가 느려요. 다시 눌러 주세요.'); }
     setTimeout(() => S.busy = false, 450);
   }
@@ -3925,9 +3960,9 @@ var W = (function () {
     const r = await NET.tx(`rooms/${S.code}/chests/${id}/by`, v => v ? undefined : S.me.key);
     if (!r.committed) return toast('다른 친구가 먼저 열었어요!');
     const free = FREE(), P = `priv/${S.code}/${S.me.key}`, u = { [`claims/${S.code}/${S.me.key}-chest-${id}`]: { p: S.me.key, t: NET.serverTS() } };
-    if (free) u[`${P}/inv/coins`] = NET.inc(30); else { u[`${P}/inv/mat`] = NET.inc(12); u[`${P}/st/mat`] = NET.inc(12); u[`rooms/${S.code}/stats/mat`] = NET.inc(12); }
+    if (free) u[`${P}/inv/coins`] = NET.inc(30); else u[`${P}/inv/carry`] = NET.inc(6);
     GM.enqueue({ id: `${S.me.key}-chest-${id}`, code: S.code, pid: S.me.key, u }); sx.chest();
-    banner(`${IC('gift', 'huge')}<div class="big">희귀 보물상자!</div><div class="sm">${free ? '코인 +30' : '자재 +12'}</div>`, 2400, { confetti: true });
+    banner(`${IC('gift', 'huge')}<div class="big">희귀 보물상자!</div><div class="sm">${free ? '코인 +30' : '보너스 블록 6개를 바로 받았어요! 피라미드로!'}</div>`, 2400, { confetti: true });
   }
   /* 순수 게임 모드: 헬스장 운동 (E를 누를 때마다 1회) */
   let repT = 0, repFlush = null;
@@ -4034,9 +4069,8 @@ var W = (function () {
   function failHTML(q, X) { const ans = X.stages.map((s, i) => `<div class="sol-step"><b>${X.stages.length > 1 ? (i + 1) + '단계 ' : ''}정답</b> ${dd(QE.answerText(s))}</div>`).join(''); return `<div class="qcard"><div class="qtitle" style="font-size:28px">좋은 도전이었어요!</div><div class="dim">풀이를 확인하고 다음 문제에서 꼭 성공해요. 끝까지 도전한 보상도 받아요.</div>${X.big ? `<div class="qbig">${X.big}</div>` : ''}<div>${ans}${dd(X.solution || '')}</div><div class="row" style="justify-content:center;margin-top:14px"><button class="btn green xl" data-act="failnext">${IC('check')} 이해했어요! 다음</button></div></div>`; }
   function flashHTML(fl) {
     const R = fl.R; return `<div class="qflash"><div class="in"><div class="rh ${fl.ok ? '' : 'no'}">${fl.ok ? (fl.first ? 'PERFECT!' : 'GREAT!') : 'NICE TRY!'}</div>
-      <div class="gains"><span class="gain" style="color:#7DFFB5">${IC('hammer')}+${R.mat}</span>${R.xp ? `<span class="gain" style="color:${STAT_COL[R.stat] || '#fff'}">${IC(ST[R.stat] ? ST[R.stat].icon : 'star')}+${R.xp} XP</span>` : ''}${R.gold ? `<span class="gain" style="color:#FFD54F">${IC('block')}황금 +${R.gold}</span>` : ''}</div>
-      ${R.full ? '<div class="fb">창고가 가득 찼어요! (자재는 더 받지 못했어요) 채석장에서 블록을 옮겨요.</div>' : ''}
-      <div class="bdl">${R.bd.map(b => `<div><span>${esc(b[0])}</span><b>${b[1] ? '+' + b[1] + ' 자재 ' : ''}${b[2] ? '+' + b[2] + ' XP' : ''}</b></div>`).join('')}</div>
+      <div class="gains">${R.blk ? `<span class="gain" style="color:#FFE08A">${IC('block')}블록 +${R.blk}</span>` : ''}${R.xp ? `<span class="gain" style="color:${STAT_COL[R.stat] || '#fff'}">${IC(ST[R.stat] ? ST[R.stat].icon : 'star')}+${R.xp} XP</span>` : ''}${R.gold ? `<span class="gain" style="color:#FFD54F">${IC('block')}황금 +${R.gold}</span>` : ''}</div>
+      <div class="bdl">${R.bd.map(b => `<div><span>${esc(b[0])}</span><b>${b[1] ? '블록 +' + b[1] + ' ' : ''}${b[2] ? '+' + b[2] + ' XP' : ''}</b></div>`).join('')}</div>
       ${S.flashLv && Date.now() < S.flashLv.until ? `<div class="lvupb">LEVEL UP! ${ST[S.flashLv.k].en} Lv.${S.flashLv.lv}</div>` : ''}</div></div>`;
   }
   function toolHTML(X) { return `<div class="tooldrawer"><div class="row"><b class="disp" style="font-size:20px">${IC('tool')} 시각적 계산 도구</b><span class="grow"></span><button class="btn sm ghost" data-act="tooltoggle">닫기</button></div><div id="toolbody" style="margin-top:10px">${TOOLS.toolsHTML(X.focus)}</div></div>`; }
@@ -4083,13 +4117,14 @@ var W = (function () {
   function calcReward(q, ok, kind) {
     const g = G(), b = GM.buffs(meta()), st = (S.priv && S.priv.st) || {}, rec = (String(st.rec || '') + (ok ? '1' : '0')).slice(-10);
     const accR = rec.split('').filter(x => x === '1').length / rec.length, streak = ok ? (st.sr || 0) + 1 : 0; let R;
-    if (kind === 'em') { R = { mat: ok ? g.emMat : 0, xp: ok ? g.emXp : 0, bd: ok ? [['긴급 점검 정답', g.emMat, g.emXp]] : [] }; if (ok && b.x2) { R.bd.push(['자재 2배', R.mat, 0]); R.mat *= 2; } if (ok && b.oasis) R.xp += Math.round(R.xp * 0.5); }
+    if (kind === 'em') { R = { mat: 0, xp: ok ? g.emXp : 0, bd: ok ? [['긴급 점검 정답', 0, g.emXp]] : [] }; if (ok && b.oasis) R.xp += Math.round(R.xp * 0.5); }
     else {
       R = GROW.reward({ ok, first: ok && q.att === 0, app: ok && (q.sp || q.diff === 'H' || q.diff === 'S' || GM.getQ(q).stages.length > 1), hint: q.hint > 0, recentAcc: accR, n10: rec.length, streak, mult: b.x2 ? 2 : 1, xmult: b.oasis ? 1.5 : 1 }, g);
-      if (kind === 'ev' && ok) { const et = q.evType; R.bd = R.bd.slice(); if (et === 'meteor') { R.mat += 12; R.xp += 15; R.bd.push(['황금 운석 보너스', 12, 15]); } else if (et === 'gold') { R.gold = 2; R.xp += 12; R.bd.push(['황금 블록 2개 (1개 = 3칸)', 0, 12]); } else if (et === 'pharaoh') { R.mat += 10; R.xp += 15; R.acc = 'crown'; R.bd.push(['파라오의 보물 + 황금 왕관', 10, 15]); } }
+      if (kind === 'ev' && ok) { const et = q.evType; R.bd = R.bd.slice(); if (et === 'meteor') { R.blk = 8; R.xp += 15; R.bd.push(['황금 운석 보너스 블록', 8, 15]); } else if (et === 'gold') { R.gold = 2; R.xp += 12; R.bd.push(['황금 블록 2개 (1개 = 3칸)', 0, 12]); } else if (et === 'pharaoh') { R.blk = 6; R.xp += 15; R.acc = 'crown'; R.bd.push(['파라오의 보물 블록 + 황금 왕관', 6, 15]); } }
     }
     R.stat = kind === 'train' ? (q.stat || S.lastStat) : (S.lastStat || 'spd');
-    const iv = inv(), capStore = Math.max(20, statV('str') * 3); if (R.mat && (iv.mat || 0) >= capStore) { R.full = true; R.mat = 0; R.bd = R.bd.map(x => [x[0], 0, x[2]]); }
+    // 문제 보상은 경험치만 (블록은 채석장에서 · 이벤트 보너스 블록만 예외)
+    R.mat = 0; R.bd = R.bd.map(x => [x[0].replace(/ 자재/g, ''), x === R.bd[R.bd.length - 1] && R.blk ? R.blk : 0, x[2]]).filter(x => x[1] || x[2]);
     R.rec = rec; R.streak = streak; return R;
   }
   const evProg = () => { const ev = meta().ev; return !!(ev && !ev.done && ev.until > NET.now() && (ev.type === 'supply' || ev.type === 'fest')); };
@@ -4153,7 +4188,7 @@ var W = (function () {
     const E = S.emSt; E.r = (E.r || '') + (ok ? '1' : '0'); E.i++; if (ok) E.ok++;
     u[`${PQ()}/em`] = Object.assign({}, E); u[`emr/${S.code}/${em.id}/${S.me.key}`] = { a: E.a, ok: E.ok, done: E.i };
     GM.enqueue({ id: q.id, code: S.code, pid: S.me.key, u });
-    if (ok) { sx.ok(); toast(`정답! +${R.mat} 자재`, 1200); } else { sx.bad(); toast('다음 문제로!', 1000); }
+    if (ok) { sx.ok(); toast(`정답! +${R.xp} XP`, 1200); } else { sx.bad(); toast('다음 문제로!', 1000); }
     S.fb = null; S.emq = null; S.busyQ = null; renderEm(true);
   }
 
@@ -4163,10 +4198,10 @@ var W = (function () {
     const iv = inv(), st = (S.priv && S.priv.st) || {}, g = G(), rub = (S.room.build || {}).rub || 0, carry = (iv.carry || 0) + (iv.gold || 0), free = FREE();
     let h = '';
     if (k === 'quest') {
-      const step = carry > 0 ? 3 : (free || (iv.mat || 0) + rub > 0) ? 2 : 1, ev = S.ctx.ev;
+      const step = carry > 0 ? 3 : 2, ev = S.ctx.ev;
       h = `<div class="ptitle">${IC('flag')} QUESTS</div>
-        ${free ? '' : `<div class="quest ${step === 1 ? 'now' : ''}"><span class="qn">1</span><div><b>GYM · UPGRADES · RANGE에서 문제 풀기</b><br><small class="dim">기구 앞에서 E → 문제를 맞히면 자재 + 그 능력치 경험치</small></div></div>`}
-        <div class="quest ${step === 2 ? 'now' : ''}"><span class="qn">${free ? 1 : 2}</span><div><b>QUARRY에서 블록 캐기</b> <small>${free ? '(돌은 무한!)' : `(자재 ${iv.mat || 0}${rub ? ` · 잔해 ${rub}` : ''})`}</small><br><small class="dim">주황 원 안에서 E → 한 번에 ${statV('bpu')}개, 최대 ${statV('str')}개까지 머리 위에 들어요</small></div></div>
+        ${free ? '' : `<div class="quest ${step === 1 ? 'now' : ''}"><span class="qn">1</span><div><b>GYM · UPGRADES · RANGE에서 문제 풀기</b><br><small class="dim">기구 앞에서 E → 문제를 맞히면 그 능력치 경험치 → 레벨 UP (더 빨리 · 더 많이)</small></div></div>`}
+        <div class="quest ${step === 2 ? 'now' : ''}"><span class="qn">${free ? 1 : 2}</span><div><b>QUARRY에서 블록 캐기</b> <small>(돌은 무한!)</small><br><small class="dim">주황 원 안에서 E → 한 번에 ${statV('bpu')}개, 최대 ${statV('str')}개까지 머리 위에 들어요</small></div></div>
         <div class="quest ${step === 3 ? 'now' : ''}"><span class="qn">${free ? 2 : 3}</span><div><b>PYRAMID에 블록 놓기</b> <small>(운반 중 ${carry})</small><br><small class="dim">배치 범위 ${statV('rng')}m 안에서 Q → 한 번에 ${statV('bpl')}개${free ? ` · 블록마다 ${g.coinBlock}코인` : ''} · 점프로 계단을 올라갈 수도 있어요</small></div></div>
         ${free ? `<div class="quest"><span class="qn">3</span><div><b>코인으로 업그레이드</b><br><small class="dim">GYM: SPEED·STRENGTH 운동(E 연타) · UPGRADES: BULK PICKUP·BULK PLACE · RANGE: 배치 범위</small></div></div>` : ''}
         ${ev ? `<div class="quest now"><span class="qn">★</span><div><b>${GM.EVENTS[ev.type].name}</b><br><small class="dim">${free ? freeEvDesc(ev.type) : GM.EVENTS[ev.type].desc}</small></div></div>` : ''}
@@ -4174,13 +4209,13 @@ var W = (function () {
     } else if (k === 'stats' || k === 'train') {
       const rec = String(st.rec || ''), racc = rec.length ? Math.round(rec.split('').filter(x => x === '1').length / rec.length * 100) : null;
       h = `<div class="ptitle">${IC(k === 'train' ? 'muscle' : 'user')} ${k === 'train' ? 'TRAINING' : 'MY BUILDER'}</div>
-        ${k === 'stats' ? `<div class="resrow"><span>${IC('block')}<b>${st.placed || 0}</b><small>쌓은 블록</small></span>${free ? `<span>${IC('coin')}<b>${st.coins || 0}</b><small>번 코인</small></span>` : `<span>${IC('check')}<b>${st.ok || 0}</b><small>해결한 문제</small></span><span>${IC('chart')}<b>${racc == null ? '-' : racc + '%'}</b><small>최근 정답률</small></span><span>${IC('hammer')}<b>${st.mat || 0}</b><small>모은 자재</small></span>`}</div>` : `<p class="dim" style="margin-top:0">${free ? 'GYM에서 E를 누를 때마다 운동해요(SPEED·STRENGTH). UPGRADES와 RANGE에서는 코인으로 업그레이드해요.' : '돈이 필요 없어요! ' + (SOC() ? '역사 퀴즈' : '수학 문제') + '를 푸는 것이 곧 운동이에요. 기구 앞에서 E → 문제를 맞히면 그 능력치 경험치가 올라요. (가만히 있으면 오르지 않아요)'}</p>`}
+        ${k === 'stats' ? `<div class="resrow"><span>${IC('block')}<b>${st.placed || 0}</b><small>쌓은 블록</small></span>${free ? `<span>${IC('coin')}<b>${st.coins || 0}</b><small>번 코인</small></span>` : `<span>${IC('check')}<b>${st.ok || 0}</b><small>해결한 문제</small></span><span>${IC('chart')}<b>${racc == null ? '-' : racc + '%'}</b><small>최근 정답률</small></span>`}</div>` : `<p class="dim" style="margin-top:0">${free ? 'GYM에서 E를 누를 때마다 운동해요(SPEED·STRENGTH). UPGRADES와 RANGE에서는 코인으로 업그레이드해요.' : '돈이 필요 없어요! ' + (SOC() ? '역사 퀴즈' : '수학 문제') + '를 푸는 것이 곧 운동이에요. 기구 앞에서 E → 문제를 맞히면 그 능력치 경험치가 올라요. (가만히 있으면 오르지 않아요)'}</p>`}
         <div class="statcards">${GROW.STAT_IDS.map(s => { const L = myLv(s), S2 = ST[s], where = { spd: 'GYM · 트레드밀', str: 'GYM · 벤치프레스', bpu: 'UPGRADES · BULK PICKUP', bpl: 'UPGRADES · BULK PLACE', rng: 'RANGE 관측소' }[s]; return `<div class="scard" style="--sc:${STAT_COL[s]}"><h4>${IC(S2.icon)} ${S2.en}</h4><div class="lv">Lv.${L.lv} <small style="font-size:16px">${fmtStat(s, L.lv)}${L.lv < g.maxLv ? ` → ${fmtStat(s, L.lv + 1)}` : ''}</small></div><div class="pbar"><i style="width:${L.need ? Math.round(L.cur / L.need * 100) : 100}%"></i></div><p>${S2.name} · ${S2.desc}</p><p>${where}${free && s !== 'spd' && s !== 'str' ? ` · ${GROW.upCost(L.lv, g)}코인` : ''}</p><button class="btn sm ghost" data-act="guide" data-s="${s}">${IC('map')} 길 안내</button></div>`; }).join('')}</div>`;
     } else if (k === 'help') {
       h = `<div class="ptitle">${IC('help')} HOW TO PLAY</div><div class="keys"><kbd>W A S D</kbd><span>이동 (방향키도 돼요) · 모바일: 왼쪽 조이스틱</span><kbd>마우스</kbd><span>화면을 끌면 시점 회전 · 휠로 확대/축소 · <b>Shift</b>를 누르면 마우스로 바로 시점 조작</span><kbd>Space</kbd><span>점프 · 피라미드 계단 오르기</span><kbd>E</kbd><span>상호작용 (훈련·운동·블록 캐기·이벤트·보물상자) · 누르고 있으면 반복</span><kbd>Q</kbd><span>블록 놓기 (초록색으로 빛나는 칸에 쌓여요)</span><kbd>Esc</kbd><span>창 닫기</span></div>
-        <h3>게임 방법</h3><p>${free ? 'QUARRY에서 블록을 캐서 → PYRAMID에 쌓으면 코인을 받아요 → 코인과 운동으로 능력치를 키워 더 빨리 더 많이 쌓아요.' : 'GYM·UPGRADES·RANGE에서 문제를 풀면 자재와 경험치 → QUARRY에서 자재만큼 블록을 캐고 → PYRAMID에 쌓아요.'} 피라미드는 아래층부터 순서대로 올라가요.</p>
+        <h3>게임 방법</h3><p>${free ? 'QUARRY에서 블록을 캐서 → PYRAMID에 쌓으면 코인을 받아요 → 코인과 운동으로 능력치를 키워 더 빨리 더 많이 쌓아요.' : 'GYM·UPGRADES·RANGE에서 문제를 맞히면 경험치 → 능력치 LEVEL UP! QUARRY에서 블록을 캐서(돌은 무한) → PYRAMID에 쌓아요.'} 피라미드는 아래층부터 순서대로 올라가요.</p>
         <h3>능력치</h3><p>SPEED(이동 속도) · STRENGTH(최대 운반량) · BULK PICKUP(한 번에 수집) · BULK PLACE(한 번에 배치) · PLACEMENT RANGE(배치 범위)</p>
-        ${free ? '' : '<h3>긴급 안전 점검</h3><p>몇 분마다 모두가 동시에 문제를 풀어요. 학급 정답률이 높으면 보너스, 낮으면 지진으로 위쪽 블록이 무너질 수 있어요(아래층은 안전). 무너진 블록은 RUBBLE 더미에서 자재 없이 다시 가져와요.</p>'}`;
+        ${free ? '' : '<h3>긴급 안전 점검</h3><p>몇 분마다 모두가 동시에 문제를 풀어요. 학급 정답률이 높으면 보너스, 낮으면 지진으로 위쪽 블록이 무너질 수 있어요(아래층은 안전). 무너진 블록은 RUBBLE 더미로 떨어져요.</p>'}`;
     } else if (k === 'settings') {
       const p = SND.prefs, q = load('pyr_q') || W.quality;
       h = `<div class="ptitle">${IC('gear')} SETTINGS</div><div class="col"><label class="row"><input type="checkbox" data-pref="sfx" ${p.sfx ? 'checked' : ''} style="width:24px;height:24px"> 효과음</label><label class="row"><input type="checkbox" data-pref="bgm" ${p.bgm ? 'checked' : ''} style="width:24px;height:24px"> 배경음악</label>
@@ -4230,10 +4265,10 @@ var W = (function () {
     const hist = free ? '' : Object.values(m.emHist || {}).sort((a, c) => a.at - c.at).map((h, i) => `<span style="background:${GM.EM_TIERS[h.tier].color}">${i + 1}차 점검 ${h.acc}% · ${GM.EM_TIERS[h.tier].name}</span>`).join('');
     const ps = GM.players(r), el = m.startAt ? GM.elapsed(m) : 0;
     let mine = '';
-    if (who === 'student' && S.priv) { const st = S.priv.st || {}; mine = `<div class="panel" style="margin:10px auto;max-width:640px"><div class="ptitle" style="justify-content:center">${IC('user')} 나의 기록 <small class="dim" style="font-family:var(--font);font-size:13px">(나만 보여요)</small></div><div class="resrow"><span>${IC('block')}<b>${st.placed || 0}</b><small>쌓은 블록</small></span>${free ? `<span>${IC('coin')}<b>${st.coins || 0}</b><small>번 코인</small></span>` : `<span>${IC('check')}<b>${st.ok || 0}</b><small>해결한 문제</small></span><span>${IC('hammer')}<b>${st.mat || 0}</b><small>모은 자재</small></span>`}</div><div class="statline" style="justify-content:center">${GROW.STAT_IDS.map(k => `<span style="color:${STAT_COL[k]}">${ST[k].en} Lv.${myLv(k).lv}</span>`).join('')}</div></div>`; }
+    if (who === 'student' && S.priv) { const st = S.priv.st || {}; mine = `<div class="panel" style="margin:10px auto;max-width:640px"><div class="ptitle" style="justify-content:center">${IC('user')} 나의 기록 <small class="dim" style="font-family:var(--font);font-size:13px">(나만 보여요)</small></div><div class="resrow"><span>${IC('block')}<b>${st.placed || 0}</b><small>쌓은 블록</small></span>${free ? `<span>${IC('coin')}<b>${st.coins || 0}</b><small>번 코인</small></span>` : `<span>${IC('check')}<b>${st.ok || 0}</b><small>해결한 문제</small></span>`}</div><div class="statline" style="justify-content:center">${GROW.STAT_IDS.map(k => `<span style="color:${STAT_COL[k]}">${ST[k].en} Lv.${myLv(k).lv}</span>`).join('')}</div></div>`; }
     return `<div class="panel"><h1>${win ? '🎉 PYRAMID COMPLETE!' : '⏰ TIME UP!'}</h1>
       <div style="font-size:22px">${win ? `${fmtT(el)} 만에 ${m.total}개의 블록을 모두 쌓았어요. 우리 반이 함께 해냈어요!` : `피라미드를 <b style="color:var(--yellow)">${pct}%</b> (${b.n || 0}/${m.total}블록)까지 쌓았어요. 다음엔 꼭 완성해요!`}</div>
-      <div class="fstats">${free ? `<div class="fstat"><b>${s.coins || 0}</b><small>모두가 번 코인</small></div>` : `<div class="fstat"><b>${s.solves || 0}</b><small>학급 전체 해결 문제</small></div><div class="fstat"><b>${s.tries ? Math.round((s.solves || 0) / s.tries * 100) : 0}%</b><small>학급 정답률</small></div><div class="fstat"><b>${s.mat || 0}</b><small>얻은 자재</small></div>`}<div class="fstat"><b>${s.carried || 0}</b><small>운반한 블록</small></div><div class="fstat"><b>${b.n || 0}</b><small>쌓은 블록</small></div><div class="fstat"><b>${ps.length}</b><small>함께한 건설자</small></div></div>
+      <div class="fstats">${free ? `<div class="fstat"><b>${s.coins || 0}</b><small>모두가 번 코인</small></div>` : `<div class="fstat"><b>${s.solves || 0}</b><small>학급 전체 해결 문제</small></div><div class="fstat"><b>${s.tries ? Math.round((s.solves || 0) / s.tries * 100) : 0}%</b><small>학급 정답률</small></div>`}<div class="fstat"><b>${s.carried || 0}</b><small>운반한 블록</small></div><div class="fstat"><b>${b.n || 0}</b><small>쌓은 블록</small></div><div class="fstat"><b>${ps.length}</b><small>함께한 건설자</small></div></div>
       ${m.settings.rank !== false ? `<div class="podium" style="margin:12px 0">${rankList(r).slice(0, 3).filter(p => (p.pl || 0) > 0).map((p, i) => `<span class="p${i + 1}"><i>${i + 1}</i>${esc(p.nick)}<small>${p.pl || 0}블록</small></span>`).join('')}</div>` : ''}${hist ? `<div class="emhist" style="justify-content:center">${hist}</div>` : ''}${mine}
       ${who === 'teacher' ? `${free ? '' : `<div class="panel" style="margin-top:12px;text-align:left"><div class="ptitle">${IC('chart')} 학생별 학습 기록 (교사용)</div>${summaryTable()}</div>`}<div class="row" style="justify-content:center;margin-top:12px">${win ? '' : '<button class="btn sm ghost" data-act="tresume2">이어 하기(+5분)</button>'}<button class="btn sm purple" data-act="newgame">새 게임</button><button class="btn sm red" data-act="treset">데이터 초기화</button><button class="btn sm ghost" data-act="home">처음으로</button></div>` : `<div class="row" style="justify-content:center;margin-top:12px"><button class="btn sm ghost" data-act="closefinal">피라미드 구경하기</button>${who === 'student' ? '<button class="btn sm" data-act="leave">처음 화면으로</button>' : ''}</div>`}</div>`;
   }
