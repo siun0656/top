@@ -377,6 +377,15 @@ body.touch .rankbox{width:220px;font-size:13px}
 @keyframes evpulse{0%,100%{box-shadow:0 8px 24px rgba(0,0,0,.35),0 0 0 4px rgba(255,200,61,.25)}50%{box-shadow:0 8px 24px rgba(0,0,0,.35),0 0 0 9px rgba(255,200,61,.08)}}
 body.touch #evbarw{top:104px}body.touch .evbar span{font-size:15px}
 
+/* ---- 랭킹 게시판 보기 · 튜토리얼 · 헬스장 등급 ---- */
+.bview{position:absolute;left:50%;bottom:26px;transform:translateX(-50%);display:flex;gap:12px;z-index:40}
+.bview .btn{min-width:84px}
+.tut{position:absolute;left:50%;bottom:104px;transform:translateX(-50%);width:min(560px,92vw);padding:16px 18px;z-index:45;border-radius:20px}
+.tut .tuth{display:flex;align-items:center;gap:8px;font-size:22px}.tut .tuth span{margin-left:auto;font-size:14px;opacity:.7}
+.tut p{margin:8px 0;font-size:17px;line-height:1.5}
+.gymrow{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 12px}.gymrow span{border:2px solid var(--gc);border-radius:12px;padding:4px 8px;opacity:.55;display:flex;flex-direction:column;font-size:13px}.gymrow span.own{opacity:1;background:color-mix(in srgb,var(--gc) 25%,transparent)}
+.sbox.coin.bump{animation:cbump .5s}@keyframes cbump{0%{transform:scale(1)}40%{transform:scale(1.18)}100%{transform:scale(1)}}
+
 </style>
 </head>
 <body>
@@ -1723,64 +1732,73 @@ var SND = (function () {
 </script>
 <script>
 /* =====================================================================
-   성장·보상 수치 (교사 설정으로 덮어쓸 수 있음) – 시뮬레이션(test/sim.js)으로 검증
+   성장·보상 수치 (교사 설정으로 덮어쓸 수 있음)
+   · 능력치는 SPEED · STRENGTH 두 개뿐, 레벨 상한 없음
+   · STRENGTH 하나가 최대 운반량과 한 번에 놓는 블록 수를 함께 올림
+   · 헬스장 7등급(이용권) · 작업장 보상
 ===================================================================== */
 var GROW = (function () {
   'use strict';
   const SPEED = 6.2; // 기본 이동 속도 (m/s)
+  const RANGE = 6; // 피라미드 배치 거리 (고정)
   const STATS = {
-    spd: { name: '스피드', en: 'SPEED', icon: 'bolt', unit: '배', machine: '트레드밀', desc: '사막을 달리는 이동 속도' },
-    str: { name: '근력', en: 'STRENGTH', icon: 'muscle', unit: '개', machine: '벤치프레스', desc: '한 번에 짊어지는 최대 블록 수' },
-    bpu: { name: '한 번에 수집', en: 'BULK PICKUP', icon: 'pick', unit: '개', machine: '곡괭이 훈련대', desc: '채석장에서 한 번에 캐는 블록 수' },
-    bpl: { name: '한 번에 배치', en: 'BULK PLACE', icon: 'stack', unit: '개', machine: '블록 쌓기 훈련대', desc: '피라미드에 한 번에 놓는 블록 수' },
-    rng: { name: '배치 범위', en: 'PLACEMENT RANGE', icon: 'target', unit: 'm', machine: '측량 망원경', desc: '블록을 놓을 수 있는 거리' }
+    spd: { name: '스피드', en: 'SPEED', icon: 'bolt', unit: '배', machine: '트레드밀', desc: '이동 속도' },
+    str: { name: '힘', en: 'STRENGTH', icon: 'muscle', unit: '개', machine: '벤치프레스', desc: '최대 운반량 + 한 번에 놓는 블록 수' }
   };
-  const STAT_IDS = ['spd', 'str', 'bpu', 'bpl', 'rng'];
-  const TABLE = {
-    spd: [1, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0, 2.1],
-    str: [2, 3, 4, 6, 8, 10, 12, 15, 18, 22, 26, 30],
-    bpu: [1, 2, 3, 4, 5, 6, 8, 10, 12, 15, 18, 22],
-    bpl: [1, 2, 3, 5, 7, 10, 12, 15, 18, 22, 26, 30],
-    rng: [5, 6.5, 8, 9.5, 11, 12.5, 14, 16, 18, 20, 22, 24]
-  };
+  const STAT_IDS = ['spd', 'str'];
+  /* 헬스장 등급: 가격(코인) · 훈련 배율 */
+  const GYMS = [
+    { id: 'basic', en: 'BASIC GYM', ko: '기본 헬스장', base: 0, mult: 1, col: '#8D6E63' },
+    { id: 'bronze', en: 'BRONZE GYM', ko: '브론즈 헬스장', base: 100, mult: 2, col: '#C7783E' },
+    { id: 'silver', en: 'SILVER GYM', ko: '실버 헬스장', base: 300, mult: 4, col: '#B0BEC5' },
+    { id: 'gold', en: 'GOLD GYM', ko: '골드 헬스장', base: 700, mult: 8, col: '#FFC93C' },
+    { id: 'emerald', en: 'EMERALD GYM', ko: '에메랄드 헬스장', base: 1500, mult: 10, col: '#2BD889' },
+    { id: 'diamond', en: 'DIAMOND GYM', ko: '다이아몬드 헬스장', base: 3000, mult: 20, col: '#6FE7FF' },
+    { id: 'legend', en: 'LEGEND GYM', ko: '레전드 헬스장', base: 8000, mult: 50, col: '#C77DFF' }
+  ];
+  GYMS.forEach(g => g.price = g.base);
+  /* 교사 설정의 '이용권 가격 배율' 반영 (10코인 단위) */
+  const applyPrices = c => { const k = (c && c.priceMul) || 1; GYMS.forEach(g => g.price = Math.round(g.base * k / 10) * 10); };
   function defaults() {
     return {
-      maxLv: 10, xp0: 10, xpInc: 9, // 레벨업 필요 경험치 = xp0 + xpInc × (현재Lv-1)
-      xpBase: 12, xpFirst: 3, xpApp: 3, xpAcc: 3, xpFail: 5, // 경험치
-      matBase: 4, matFirst: 1, matApp: 1, matStreak: 2, matFail: 2, // 자재
-      emN: 10, emDur: 150, emGap: 6, emFirst: 6, emMat: 2, emXp: 4, // 긴급 점검
-      thGreat: 85, thOk: 70, thWarn: 55, collapse: 1, collapsePct: 5, bonusPct: 0.03, // 결과 기준
+      v: 3, // 수치 버전 (예전 설정이 남아 있으면 새 기본값으로)
+      xp0: 20, xpInc: 15, // 레벨업 필요 경험치 = xp0 + xpInc × (현재Lv-1), 레벨 상한 없음
+      spdStep: 0.12, carry0: 5, // SPEED Lv당 이동 속도 +12%, STRENGTH Lv당 운반 +5개 · 배치 +1개
+      xpBase: 3, xpFirst: 1, xpApp: 1, xpAcc: 1, xpFail: 1, // 문제 풀이 경험치 (헬스장 배율 곱함) · 기본 헬스장에서 Lv.2까지 약 5문제
+      emN: 10, emDur: 150, emGap: 6, emFirst: 6, emXp: 2, // 긴급 점검
+      thGreat: 85, thOk: 70, thWarn: 55, collapse: 1, collapsePct: 5, bonusPct: 0.03,
       randEv: 1, evGap: 3.2,
-      coinBlock: 2, upBase: 30, upMul: 1.5, repXp: 1, // 순수 게임 모드(없음): 블록 1개당 코인 · 업그레이드 가격 · 운동 1회 경험치
-      tables: JSON.parse(JSON.stringify(TABLE))
+      coinBlock: 1, // 블록 1개 놓을 때 코인
+      setXp: 1, setTaps: 8, setMin: 3.5, priceMul: 1, // 자유 모드 운동 1세트: E 8번 · 최소 3.5초 → 경험치 1 × 헬스장 배율 · 이용권 가격 배율
+      payA: 8, payB: 5, payC0: 8, payCm: 0.2, comboEvery: 5, comboBonus: 10, tiredAfter: 6, rateCap: 90 // 작업장 보상
     };
   }
-  const merge = raw => { const d = defaults(); if (!raw) return d; const o = Object.assign(d, raw); o.tables = Object.assign(defaults().tables, raw.tables || {}); return o; };
+  const merge = raw => { const d = defaults(); if (!raw || raw.v !== d.v) return d; const o = Object.assign(d, raw); delete o.tables; delete o.maxLv; return o; };
   const need = (lv, c) => Math.round(c.xp0 + c.xpInc * (lv - 1));
-  const val = (k, lv, c) => { const t = (c && c.tables && c.tables[k]) || TABLE[k]; return t[Math.max(0, Math.min(t.length - 1, lv - 1))]; };
-  /* 학급 인원·시간에 맞춘 목표 블록 (시뮬레이션 보정값) */
-  /* 순수 게임 모드 업그레이드 가격 (현재 레벨 → 다음 레벨) */
-  const upCost = (lv, c) => Math.round(c.upBase * Math.pow(c.upMul, lv - 1));
+  /* 능력치 값 */
+  const speedMul = (lv, c) => +(1 + (c || defaults()).spdStep * (lv - 1)).toFixed(2);
+  const carryCap = (lv, c) => (c || defaults()).carry0 * lv;
+  const placeN = lv => lv; // 한 번에 놓기 (= 한 번에 캐기)
+  const val = (k, lv, c) => k === 'spd' ? speedMul(lv, c) : carryCap(lv, c);
+  const fmt = (k, lv, c) => k === 'spd' ? `이동 ×${speedMul(lv, c).toFixed(2)}` : `운반 ${carryCap(lv, c)}개 · 한 번에 ${placeN(lv)}개`;
   const autoTarget = (n, min) => Math.max(120, Math.round(n * min * 2.4 * Math.pow(min / 25, 0.4)));
-  /* 한 문제의 보상: o = {ok, first, app, hint, recentAcc, streak, mult, xmult} */
+  /* 한 문제의 보상 (경험치만): o = {ok, first, app, hint, recentAcc, streak, xmult} */
   function reward(o, c) {
-    const bd = []; let mat = 0, xp = 0;
-    const add = (label, m, x) => { mat += m; xp += x; bd.push([label, m, x]); };
-    if (!o.ok) add('끝까지 도전', c.matFail, c.xpFail);
+    const bd = []; let xp = 0;
+    const add = (label, x) => { xp += x; bd.push([label, 0, x]); };
+    if (!o.ok) add('끝까지 도전', c.xpFail);
     else {
-      add(o.hint ? '도움을 받아 해결' : '문제 해결', c.matBase, c.xpBase);
-      if (o.first) add('첫 시도 성공', c.matFirst, c.xpFirst);
-      if (o.app) add('응용 문제', c.matApp, c.xpApp);
-      if (o.streak && o.streak % 3 === 0) add(o.streak + '연속 정답', c.matStreak, 0);
-      if (o.recentAcc >= 0.8 && o.n10 >= 5) add('최근 정답률 보너스', 0, c.xpAcc);
+      add(o.hint ? '도움을 받아 해결' : '문제 해결', c.xpBase);
+      if (o.first) add('첫 시도 성공', c.xpFirst);
+      if (o.app) add('응용 문제', c.xpApp);
+      if (o.recentAcc >= 0.8 && o.n10 >= 5) add('최근 정답률 보너스', c.xpAcc);
     }
-    if (o.mult && o.mult > 1) { const extra = Math.round(mat * (o.mult - 1)); add('자재 2배 이벤트', extra, 0); }
-    if (o.xmult && o.xmult > 1) { const ex = Math.round(xp * (o.xmult - 1)); add('오아시스의 축복', 0, ex); }
-    return { mat, xp, bd };
+    if (o.xmult && o.xmult > 1) { const ex = Math.round(xp * (o.xmult - 1)); add('오아시스의 축복', ex); }
+    return { mat: 0, xp, bd };
   }
-  /* 레벨 계산 (xp 누적값 → 레벨, 다음까지 남은 양) */
-  function levelOf(total, c) { let lv = 1, x = total || 0; while (lv < c.maxLv && x >= need(lv, c)) { x -= need(lv, c); lv++; } return { lv, cur: x, need: lv >= c.maxLv ? 0 : need(lv, c) }; }
-  return { SPEED, STATS, STAT_IDS, TABLE, defaults, merge, need, val, autoTarget, upCost, reward, levelOf };
+  /* 레벨 계산 (상한 없음) */
+  function levelOf(total, c) { let lv = 1, x = total || 0, g = 0; while (x >= need(lv, c) && g++ < 100000) { x -= need(lv, c); lv++; } return { lv, cur: x, need: need(lv, c) }; }
+  return { SPEED, RANGE, STATS, STAT_IDS, GYMS, applyPrices, defaults, merge, need, val, fmt, speedMul, carryCap, placeN, autoTarget, reward, levelOf };
 })();
 if (typeof module !== 'undefined') module.exports = GROW;
 
@@ -2099,6 +2117,7 @@ var GM = (function () {
     if (R.rec != null) u[`${P}/st/rec`] = R.rec;
     if (R.streak != null) u[`${P}/st/sr`] = R.streak;
     if (R.acc) u[`rooms/${code}/players/${pid}/acc/${R.acc}`] = 1;
+    if (R.ls) { const PP = `rooms/${code}/players/${pid}/ls`; if (R.ls.pts) u[`${PP}/sc`] = inc(R.ls.pts); if (ok) u[`${PP}/n`] = inc(1); if (R.ls.bs > R.ls.prev) { u[`${PP}/bs`] = R.ls.bs; u[`${P}/st/bs`] = R.ls.bs; } }
     u[`${P}/log/${q.id.replace(/[.#$\[\]/]/g, '_')}`] = { ok: ok ? 1 : 0, a: q.att, h: q.hint, d: q.diff, tp: q.tpl, k: q.kind || 'train', m: R.mat || 0, x: R.xp || 0, s: Math.round((NET.now() - q.at) / 1000), t: NET.serverTS() };
     u[`${ST}/tries`] = inc(1); if (ok) u[`${ST}/solves`] = inc(1);
     if (ok && extra && extra.evProg) u[`rooms/${code}/meta/ev/prog`] = inc(1);
@@ -2259,16 +2278,22 @@ var GM = (function () {
   function pickEventType(room) { const g = GROW.merge(room.meta.settings.grow); const t = EV_TYPES.filter(x => x !== room.meta.lastEv && !(x === 'storm' && Math.random() < 0.5)); return t[Math.floor(Math.random() * t.length)]; }
 
   /* 순수 게임 모드: 코인으로 업그레이드 구매 (Transaction으로 잔액 검사 → 중복·초과 구매 불가) */
-  async function buy(code, pid, stat, cost, xpAdd) {
-    let ok = false;
-    const t = await NET.tx(`priv/${code}/${pid}/inv`, v => { v = v || {}; if ((v.coins || 0) < cost) { ok = false; return undefined; } ok = true; v.coins = (v.coins || 0) - cost; return v; });
-    if (!t.committed || !ok) return false;
-    await NET.update('', { [`priv/${code}/${pid}/xp/${stat}`]: NET.inc(xpAdd), [`priv/${code}/${pid}/st/buys`]: NET.inc(1) });
-    return true;
+  /* 헬스장 이용권: 바로 아래 등급을 가진 경우에만, 코인이 충분할 때만 (트랜잭션) */
+  async function buyGym(code, pid, tier, price) {
+    let ok = false, why = 'fail';
+    const t = await NET.tx(`priv/${code}/${pid}/inv`, v => { v = v || {}; const cur = v.gym || 0; ok = false; if (cur >= tier) { why = 'own'; return undefined; } if (cur !== tier - 1) { why = 'order'; return undefined; } if ((v.coins || 0) < price) { why = 'coins'; return undefined; } ok = true; v.coins = (v.coins || 0) - price; v.gym = tier; return v; });
+    if (!t.committed || !ok) return why;
+    NET.update('', { [`priv/${code}/${pid}/glog/${tier}`]: { p: price, t: NET.serverTS() }, [`priv/${code}/${pid}/st/spent`]: NET.inc(price), [`rooms/${code}/players/${pid}/gym`]: tier }).catch(() => { });
+    return 'ok';
+  }
+  /* 작업장 보상: 영수증(claims)으로 한 번만 지급 */
+  function jobPay(code, pid, id, type, amt, bonus) {
+    const P = `priv/${code}/${pid}`;
+    enqueue({ id, code, pid, u: { [`claims/${code}/${id}`]: { p: pid, t: NET.serverTS() }, [`${P}/inv/coins`]: NET.inc(amt), [`${P}/st/earn`]: NET.inc(amt), [`${P}/st/job${type}`]: NET.inc(1), [`${P}/jlog/${id.replace(/[.#$\[\]/]/g, '_')}`]: { k: type, c: amt, b: bonus || 0, t: NET.serverTS() } } });
   }
   const isFree = meta => !!(meta && meta.settings && meta.settings.mode === 'free');
   const CURR = [{ grade: 5, sem: 2, unit: 4, name: '5학년 2학기 4단원 · 소수의 곱셈', ready: true, topics: [['all', '단원 전체 (추천)']] }, { grade: 5, sem: 2, unit: 2, name: '5학년 2학기 2단원 · 분수의 곱셈', ready: false }, { grade: 5, sem: 2, unit: 1, name: '5학년 2학기 1단원 · 수의 범위와 어림하기', ready: false }, { grade: 6, sem: 1, unit: 3, name: '6학년 1학기 3단원 · 소수의 나눗셈', ready: false }];
-  return { buy, isFree, isSoc, setSubj, hintTitle, CURR, PROFILES, CFG_DEF, cfgDefault, cfgOf, nextQ, emQ, evQ, emCount, getQ, HINT_TITLES, hintAvail, hash, layout, layerOf, totalOf, sizeFor, collapseFloor, ZONES, EVENTS, EV_TYPES, EM_TIERS, tierOf, buffs, speedMult, defaults, makeMeta, createRoom, news, sanitizeNick, pidOf, players, isOnline, join, defaultLook, SHIRTS, SKINS, HATS, heartbeat, timeLeft, elapsed, claimUpdate, setPid, setNote, enqueue, pump, pending, pickup, place, setCfg, replaceQ, onlinePids, startEmergency, emAccuracy, resolveEmergency, fireEvent, resolveEvent, pickEventType };
+  return { buyGym, jobPay, isFree, isSoc, setSubj, hintTitle, CURR, PROFILES, CFG_DEF, cfgDefault, cfgOf, nextQ, emQ, evQ, emCount, getQ, HINT_TITLES, hintAvail, hash, layout, layerOf, totalOf, sizeFor, collapseFloor, ZONES, EVENTS, EV_TYPES, EM_TIERS, tierOf, buffs, speedMult, defaults, makeMeta, createRoom, news, sanitizeNick, pidOf, players, isOnline, join, defaultLook, SHIRTS, SKINS, HATS, heartbeat, timeLeft, elapsed, claimUpdate, setPid, setNote, enqueue, pump, pending, pickup, place, setCfg, replaceQ, onlinePids, startEmergency, emAccuracy, resolveEmergency, fireEvent, resolveEvent, pickEventType };
 })();
 
 </script>
@@ -2516,6 +2541,8 @@ var Avatar = (function () {
     else if (mode === 'think') { aR = -2.2; aRz = -0.6; headX = 0.15; headY = Math.sin(t) * 0.15; bodyY = Math.sin(t * 2) * 0.015; }
     else { bodyY = Math.sin(t * 2 + av.ph) * 0.015; aL = Math.sin(t * 1.6 + av.ph) * 0.05; aR = -aL; headY = Math.sin(t * 0.7 + av.ph) * 0.12; }
     if (st.carry && !['bench', 'tread', 'mine', 'place', 'rep', 'dance'].includes(mode)) { aL = aR = -3.0; aLz = 0.18; aRz = -0.18; }
+    else if (st.hold && !['bench', 'tread', 'dance', 'cheer'].includes(mode)) { aL = aR = -1.3; aLz = 0.14; aRz = -0.14; }
+    const hv = st.heavy || 0; if (hv > 0 && st.carry && (mode === 'walk' || mode === 'idle')) { bodyX -= 0.1 * hv; if (mv > 0.05) B.rotation.z = Math.sin(av.ph) * 0.07 * hv; hipsY -= 0.06 * hv; }
     if (mode !== 'bench') { B.position.y = bodyY; B.rotation.y = bodyRY; }
     av.hips.position.y = hipsY; av.hips.rotation.x = 0; av.torso.rotation.x = bodyX;
     av.armL.rotation.set(aL, 0, aLz); av.armR.rotation.set(aR, 0, aRz); av.legL.rotation.x = lL - bodyX; av.legR.rotation.x = lR - bodyX; av.head.rotation.set(headX, headY, 0);
@@ -2579,14 +2606,16 @@ var Editor = (function () {
 <script>
 /* =====================================================================
    3D 게임 월드 (Three.js) – 하나의 넓은 사막에 모든 시설이 걸어서 연결됨
-   SPAWN 광장 · QUARRY · PYRAMID · GYM(SPEED/STRENGTH) · UPGRADES(BULK PICKUP/PLACE) · RANGE
+   SPAWN 광장 · QUARRY · PYRAMID · GYM 7등급(SPEED/STRENGTH) · WORK YARD · LEADERBOARD
    · 피라미드 블록·운반 블록·날아가는 블록·잔해 = InstancedMesh
    · 3인칭 카메라(장애물 충돌), 마우스 드래그/시프트락 시점, 점프·계단 오르기
 ===================================================================== */
 var W = (function () {
   'use strict';
   let T = null, R = null, scene, camera, canvas, clock, mode = 'player', quality = 'mid', running = false, rafId = 0;
-  const POS = { pyr: [0, 0], quarry: [-52, -2], gym: [-25, 44], upg: [25, 44], range: [44, -24], spawn: [0, 50], sphinx: [-30, -42], oasis: [56, 16], rubble: [-41, 9], goldRock: [-60, -12] };
+  const POS = { pyr: [0, 0], quarry: [-52, -2], work: [-34, 40], rank: [0, -60], spawn: [0, 50], sphinx: [-30, -42], oasis: [-68, 46], rubble: [-41, 9], goldRock: [-60, -12] };
+  POS.gyms = [68, 49, 30, 11, -8, -27, -46].map(a => { const r = a * Math.PI / 180, x = Math.cos(r) * 62, z = Math.sin(r) * 62; return [x, z, Math.atan2(-x, -z)]; });
+  POS.gym = POS.gyms[0]; POS.jobA = [POS.work[0] - 11, POS.work[1] - 6.5]; POS.jobAd = [POS.work[0] + 10, POS.work[1] + 2]; POS.jobC = [POS.work[0] - 10, POS.work[1] + 7.2]; POS.bins = [[POS.work[0] - 4, POS.work[1] + 7.6], [POS.work[0] - 0.5, POS.work[1] + 7.6], [POS.work[0] + 3, POS.work[1] + 7.6]];
   const QUARRY_R = 10, WORLD_R = 86, LOBBY_R = 12.5;
   const MACHINES = [], COLL = [], BOXES = []; // 원형 충돌체 [x,z,r], 상자 충돌체 [x0,z0,x1,z1,ytop]
   const st = { N: 0, bs: 1.3, total: 0, lay: null, n: -1, shown: null, colH: null, slotPos: null, done: false, gold: {} };
@@ -2658,7 +2687,7 @@ var W = (function () {
     if (SH()) { R.shadowMap.enabled = true; R.shadowMap.type = quality === 'high' ? T.PCFSoftShadowMap : T.PCFShadowMap; }
     scene = new T.Scene(); scene.fog = new T.Fog(0xE9D2A8, 120, 360);
     camera = new T.PerspectiveCamera(60, 1, 0.3, 1000); clock = new T.Clock();
-    buildEnv(); buildSpawn(); buildQuarry(); buildGym(); buildUpgrades(); buildRange(); buildDecor(); buildFx();
+    buildEnv(); buildSpawn(); buildQuarry(); buildPiles(); buildGyms(); buildWorkYard(); buildRankZone(); buildSignposts(); buildDecor(); buildFx();
     carryMesh = new T.InstancedMesh(new T.BoxGeometry(0.5, 0.5, 0.5), lam(0xffffff), 1600); carryMesh.frustumCulled = false; carryMesh.instanceMatrix.setUsage(T.DynamicDrawUsage); initColors(carryMesh, 1600); carryMesh.count = 0; if (SH()) carryMesh.castShadow = true; scene.add(carryMesh);
     flyMesh = new T.InstancedMesh(new T.BoxGeometry(1, 1, 1), lam(0xffffff), 400); flyMesh.frustumCulled = false; flyMesh.instanceMatrix.setUsage(T.DynamicDrawUsage); initColors(flyMesh, 400); flyMesh.count = 0; scene.add(flyMesh);
     resize(); window.addEventListener('resize', resize); if (window.ResizeObserver) new ResizeObserver(() => resize()).observe(canvas); bindInput(); running = true; loop(); return api;
@@ -2686,7 +2715,8 @@ var W = (function () {
     const ground = new T.Mesh(g, new T.MeshLambertMaterial({ vertexColors: true })); ground.receiveShadow = true; scene.add(ground);
     // 길
     const path = (a, b, w) => { const dx = b[0] - a[0], dz = b[1] - a[1], L = Math.hypot(dx, dz); const m = new T.Mesh(new T.PlaneGeometry(w || 5, L), lam(0xCFA265)); m.rotation.set(-Math.PI / 2, 0, Math.atan2(dx, dz)); m.position.set((a[0] + b[0]) / 2, 0.03, (a[1] + b[1]) / 2); m.receiveShadow = true; scene.add(m); };
-    path(POS.spawn, POS.pyr, 6); path(POS.spawn, POS.gym); path(POS.spawn, POS.upg); path(POS.gym, POS.quarry); path(POS.quarry, POS.pyr); path(POS.pyr, POS.range); path(POS.upg, POS.range);
+    path(POS.spawn, POS.pyr, 6); path(POS.spawn, POS.work); path(POS.work, POS.quarry); path(POS.quarry, POS.pyr); path(POS.pyr, POS.rank, 5);
+    const gf = POS.gyms.map(([x, z]) => [x * 0.86, z * 0.86]); path(POS.spawn, gf[0], 5); for (let i = 0; i < 6; i++) path(gf[i], gf[i + 1], 5); path(gf[3], POS.pyr, 4);
     const plaza = new T.Mesh(new T.CircleGeometry(30, 48), lam(0xD8B272)); plaza.rotation.x = -Math.PI / 2; plaza.position.y = 0.025; plaza.receiveShadow = true; scene.add(plaza); shared.plaza = plaza;
   }
   /* ---------------- 시작 광장 ---------------- */
@@ -2715,17 +2745,13 @@ var W = (function () {
     }
     const floor = new T.Mesh(new T.CircleGeometry(QUARRY_R + 5, 40), lam(0xBFA582)); floor.rotation.x = -Math.PI / 2; floor.position.set(qx, 0.035, qz); floor.receiveShadow = true; scene.add(floor);
     const ring = new T.Mesh(new T.RingGeometry(QUARRY_R - 0.5, QUARRY_R, 64), basic(0xFF9800, { transparent: true, opacity: 0.8, side: T.DoubleSide })); ring.rotation.x = -Math.PI / 2; ring.position.set(qx, 0.07, qz); scene.add(ring); shared.qRing = ring;
-    // 캐낼 수 있는 바위 덩어리들
-    const M = new T.Matrix4(), q = new T.Quaternion(), e = new T.Euler(), v = new T.Vector3(), one = new T.Vector3(1, 1, 1);
-    const stones = new T.InstancedMesh(new T.BoxGeometry(1.3, 1.3, 1.3), lam(0xE2C38C), 80); stones.frustumCulled = false; let k = 0;
-    [[qx - 5, qz - 5], [qx + 3, qz - 7], [qx - 7, qz + 3], [qx + 4, qz + 5]].forEach(([px, pz]) => { for (let a = 0; a < 3; a++) for (let b = 0; b < 3; b++) for (let c = 0; c < 2; c++) { if (c && (a + b) % 2) continue; e.set(0, hashN(k) * 0.3, 0); q.setFromEuler(e); v.set(px + a * 1.35, 0.65 + c * 1.3, pz + b * 1.35); M.compose(v, q, one); stones.setMatrixAt(k++, M); } });
-    stones.count = k; if (SH()) { stones.castShadow = true; stones.receiveShadow = true; } scene.add(stones);
+    const M = new T.Matrix4(), q = new T.Quaternion(), e = new T.Euler(), v = new T.Vector3();
     // 수레·곡괭이 거치대
-    const cart = new T.Group(); box(2.4, 1, 1.5, lam(0x8B5A2B), 0, 1.05, 0, cart); box(2.1, 0.5, 1.2, lam(0xE2C38C), 0, 1.6, 0, cart); [[-0.85, 0.8], [0.85, 0.8], [-0.85, -0.8], [0.85, -0.8]].forEach(([a, b]) => { const w = cyl(0.45, 0.45, 0.2, 14, lam(0x3A2412), a, 0.45, b, cart); w.rotation.x = Math.PI / 2; }); cart.position.set(qx + 7, 0, qz + 2); cart.rotation.y = 0.6; scene.add(cart); COLL.push([qx + 7, qz + 2, 1.4]);
-    sign('QUARRY', '채석장 · 주황 원 안에서 E', qx + 6, qz + 12, Math.PI * 0.75, { w: 8, h: 2.6, y: 4.4, bg: '#4E342E', acc: '#FF9800' });
+    const cart = new T.Group(); box(2.4, 1, 1.5, lam(0x8B5A2B), 0, 1.05, 0, cart); box(2.1, 0.5, 1.2, lam(0xE2C38C), 0, 1.6, 0, cart); [[-0.85, 0.8], [0.85, 0.8], [-0.85, -0.8], [0.85, -0.8]].forEach(([a, b]) => { const w = cyl(0.45, 0.45, 0.2, 14, lam(0x3A2412), a, 0.45, b, cart); w.rotation.x = Math.PI / 2; }); cart.position.set(qx - 1.5, 0, qz + 8.8); cart.rotation.y = 0.6; scene.add(cart); COLL.push([qx - 1.5, qz + 8.8, 1.4]);
+    sign('QUARRY', '채석장 · 블록 더미 옆에서 E', qx + 6, qz + 12, Math.PI * 0.75, { w: 8, h: 2.6, y: 4.4, bg: '#4E342E', acc: '#FF9800' });
     rubMesh = new T.InstancedMesh(new T.BoxGeometry(1, 1, 1), lam(0xC9A46A), 90); rubMesh.frustumCulled = false; rubMesh.count = 0; scene.add(rubMesh);
     for (let i = 0; i < 90; i++) { const a = hashN(i + 300) * Math.PI * 2, d = Math.sqrt(hashN(i + 400)) * 3.2, hg = Math.max(0, 1.6 - d * 0.5) * hashN(i + 500); e.set(hashN(i) * 2, hashN(i + 1) * 3, hashN(i + 2)); q.setFromEuler(e); v.set(POS.rubble[0] + Math.cos(a) * d, 0.45 + hg, POS.rubble[1] + Math.sin(a) * d); M.compose(v, q, new T.Vector3(0.9, 0.9, 0.9)); rubMesh.setMatrixAt(i, M); }
-    shared.rubSign = sign('RUBBLE', '무너진 블록 · 자재 없이 가져가요', POS.rubble[0], POS.rubble[1] + 4.5, Math.PI, { w: 5, h: 1.6, y: 2.4, bg: '#5D4037', acc: '#FFC107' }); shared.rubSign.visible = false;
+    shared.rubSign = sign('RUBBLE', '무너진 블록 · 다시 가져가요', POS.rubble[0], POS.rubble[1] + 4.5, Math.PI, { w: 5, h: 1.6, y: 2.4, bg: '#5D4037', acc: '#FFC107' }); shared.rubSign.visible = false;
     const gr = new T.Group(), gm = new T.Mesh(new T.DodecahedronGeometry(2.3, 0), new T.MeshLambertMaterial({ color: 0xFFD54F, emissive: 0x8A5A00 })); gm.position.y = 2.1; gr.add(gm);
     gr.position.set(POS.goldRock[0], 0, POS.goldRock[1]); gr.visible = false; scene.add(gr); shared.goldRock = gr;
   }
@@ -2742,31 +2768,6 @@ var W = (function () {
     sign(title, sub, cx, cz - D2 / 2 - 0.9, Math.PI, { w: W2 * 0.55, h: 2.6, y: 9.9, posts: false, bg: '#1A1F36', acc: '#FFC107' });
   }
   function zoneBoard(text, sub, x, z, color) { sign(text, sub, x, z, Math.PI, { w: 6.2, h: 1.7, y: 5.6, posts: false, bg: color, acc: '#FFFFFF' }); }
-  /* ---------------- 헬스장: SPEED · STRENGTH ---------------- */
-  function buildGym() {
-    const [gx, gz] = POS.gym; pavilion(gx, gz, 30, 15, 0xE91E63, 0xFF80AB, 'GYM', '헬스장 · 수학 문제가 곧 운동!');
-    zoneBoard('SPEED', '트레드밀 · 이동 속도', gx - 7.5, gz - 6.6, '#0277BD'); zoneBoard('STRENGTH', '벤치프레스 · 최대 운반량', gx + 7.5, gz - 6.6, '#C62828');
-    for (let k = 0; k < 3; k++) addMachine('spd', k, gx - 11.5 + k * 4, gz + 1.2, 0x29B6F6);
-    for (let k = 0; k < 3; k++) addMachine('str', k, gx + 3.5 + k * 4, gz + 1.2, 0xEF5350);
-  }
-  /* ---------------- 업그레이드: BULK PICKUP · BULK PLACE ---------------- */
-  function buildUpgrades() {
-    const [ux, uz] = POS.upg; pavilion(ux, uz, 30, 15, 0x00897B, 0x80CBC4, 'UPGRADES', '업그레이드 · 한 번에 수집 / 한 번에 배치');
-    zoneBoard('BULK PICKUP', '한 번에 수집', ux - 7.5, uz - 6.6, '#E65100'); zoneBoard('BULK PLACE', '한 번에 배치', ux + 7.5, uz - 6.6, '#2E7D32');
-    for (let k = 0; k < 3; k++) addMachine('bpu', k, ux - 11.5 + k * 4, uz + 1.2, 0xFF9800);
-    for (let k = 0; k < 3; k++) addMachine('bpl', k, ux + 3.5 + k * 4, uz + 1.2, 0x66BB6A);
-  }
-  /* ---------------- 배치 범위: RANGE 관측소 ---------------- */
-  function buildRange() {
-    const [rx, rz] = POS.range;
-    const base = cyl(9, 9.5, 0.4, 32, lam(0x5E548E), rx, 0.2, rz); const top = new T.Mesh(new T.CircleGeometry(8.8, 32), lam(0x7E6FB8)); top.rotation.x = -Math.PI / 2; top.position.set(rx, 0.41, rz); top.receiveShadow = true; scene.add(top);
-    const tw = cyl(1.6, 2.2, 14, 8, lam(0xD1C4E9), rx + 6, 7, rz + 5); COLL.push([rx + 6, rz + 5, 2.2]);
-    const dome = new T.Mesh(new T.SphereGeometry(2.4, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2), lam(0x7E57C2)); dome.position.set(rx + 6, 14, rz + 5); scene.add(dome);
-    const beacon = new T.Mesh(new T.SphereGeometry(0.6, 12, 8), basic(0xE040FB)); beacon.position.set(rx + 6, 16.8, rz + 5); scene.add(beacon); shared.beacon = beacon;
-    sign('RANGE', '배치 범위 · 측량 망원경', rx - 1, rz + 9.5, Math.atan2(-rx, -rz) + Math.PI, { w: 7, h: 2.2, y: 3.8, bg: '#4A148C', acc: '#E040FB' });
-    const face = Math.atan2(-rx, -rz); // 피라미드를 향함
-    for (let k = 0; k < 3; k++) { const a = face + (k - 1) * 0.55, d = 4.2; addMachine('rng', k, rx + Math.sin(a) * d * 0.6 - Math.sin(face) * 1.5, rz + Math.cos(a) * d * 0.6 - Math.cos(face) * 1.5, 0xAB47BC, face, 0.4); }
-  }
   /* 훈련 기구: 기구 원점 = 학생이 서는 자리, 학생은 기구의 +z 쪽을 바라봄 */
   function addMachine(s, idx, x, z, col, rot, baseY) {
     const g = new T.Group(), dark = lam(0x23263F), c = lam(col), steel = lam(0xCFD8DC);
@@ -2800,13 +2801,19 @@ var W = (function () {
     g.position.set(x, 0, z); g.scale.setScalar(s); scene.add(g); COLL.push([x, z, 0.5 * s]); return g;
   }
   function cactus(x, z) { const g = new T.Group(), m = lam(0x3E9E4A); box(0.75, 2.8, 0.75, m, 0, 1.4, 0, g); box(0.5, 1.3, 0.5, m, 0.65, 1.7, 0, g); box(0.5, 0.5, 0.5, m, 0.45, 1.2, 0, g); box(0.45, 1.1, 0.45, m, -0.6, 2.0, 0, g); g.position.set(x, 0, z); g.rotation.y = hashN(x * 13 + z) * 6; scene.add(g); COLL.push([x, z, 0.6]); }
+  function clearOf(x, z, r) {
+    if (POS.gyms.some(([gx, gz]) => Math.hypot(x - gx, z - gz) < 12.5 + r)) return false;
+    if (Math.abs(x - POS.work[0]) < 16 + r && Math.abs(z - POS.work[1]) < 12 + r) return false;
+    if (Math.hypot(x - POS.rank[0], z - POS.rank[1]) < 18 + r || Math.hypot(x - POS.oasis[0], z - POS.oasis[1]) < 10 + r) return false;
+    return true;
+  }
   function buildDecor() {
-    [[14, 30, 1.1], [44, 4, 1], [62, 30, 1.2], [-62, 22, 1], [-10, -48, 1], [12, -54, 1.2], [-44, -36, 0.95], [64, 52, 1.3], [-70, 50, 1.1], [66, -44, 1], [-14, 64, 1], [16, 66, 1.1]].forEach(p => palm(p[0], p[1], p[2]));
-    [[36, -2], [-30, 18], [-66, -40], [50, -56], [-4, 70], [74, 8], [-76, 6], [26, 70]].forEach(p => cactus(p[0], p[1]));
-    for (let i = 0; i < 24; i++) { const a = hashN(i + 50) * Math.PI * 2, d = 64 + hashN(i + 70) * 20; const r = new T.Mesh(new T.DodecahedronGeometry(1 + hashN(i) * 2.2, 0), lam(i % 2 ? 0xB4A08A : 0xC8B08C)); r.position.set(Math.cos(a) * d, 0.5, Math.sin(a) * d); r.rotation.set(hashN(i) * 3, hashN(i + 1) * 3, 0); if (SH()) { r.castShadow = true; r.receiveShadow = true; } scene.add(r); COLL.push([r.position.x, r.position.z, 1.4 + hashN(i) * 1.5]); }
+    [[14, 30, 1.1], [44, 4, 1], [62, 30, 1.2], [-62, 22, 1], [-10, -48, 1], [12, -54, 1.2], [-44, -36, 0.95], [64, 52, 1.3], [-70, 50, 1.1], [66, -44, 1], [-14, 64, 1], [16, 66, 1.1]].filter(p => clearOf(p[0], p[1], 1)).forEach(p => palm(p[0], p[1], p[2]));
+    [[36, -2], [-30, 18], [-66, -40], [50, -56], [-4, 70], [74, 8], [-76, 6], [26, 70]].filter(p => clearOf(p[0], p[1], 1)).forEach(p => cactus(p[0], p[1]));
+    for (let i = 0; i < 24; i++) { const a = hashN(i + 50) * Math.PI * 2, d = 64 + hashN(i + 70) * 20; if (!clearOf(Math.cos(a) * d, Math.sin(a) * d, 3)) continue; const r = new T.Mesh(new T.DodecahedronGeometry(1 + hashN(i) * 2.2, 0), lam(i % 2 ? 0xB4A08A : 0xC8B08C)); r.position.set(Math.cos(a) * d, 0.5, Math.sin(a) * d); r.rotation.set(hashN(i) * 3, hashN(i + 1) * 3, 0); if (SH()) { r.castShadow = true; r.receiveShadow = true; } scene.add(r); COLL.push([r.position.x, r.position.z, 1.4 + hashN(i) * 1.5]); }
     const [ox, oz] = POS.oasis; const water = new T.Mesh(new T.CircleGeometry(7.5, 32), new T.MeshLambertMaterial({ color: 0x29A9E8, emissive: 0x08304E })); water.rotation.x = -Math.PI / 2; water.position.set(ox, 0.07, oz); scene.add(water);
     const shore = new T.Mesh(new T.RingGeometry(7.5, 9.2, 32), lam(0x8BC34A)); shore.rotation.x = -Math.PI / 2; shore.position.set(ox, 0.06, oz); scene.add(shore);
-    palm(ox + 9, oz - 2, 1.1); palm(ox - 8, oz + 4, 0.95); palm(ox + 2, oz + 10, 1.2);
+    palm(ox + 9, oz - 2, 1.1); palm(ox - 8, oz + 4, 0.95); palm(ox + 2, oz - 10, 1.2);
     // 스핑크스
     const [sx, sz] = POS.sphinx, sg = new T.Group(), sand = lam(0xE0B878), sand2 = lam(0xC99B5A);
     box(5, 2.2, 11, sand, 0, 1.1, 0, sg); box(4.4, 3.2, 4, sand, 0, 3.1, -3.2, sg); box(3.6, 3.4, 3.2, sand2, 0, 5.6, -4.2, sg); box(4.2, 2.8, 1.2, lam(0x1E63C9), 0, 5.4, -3.2, sg); box(3, 2.6, 0.4, sand, 0, 5.7, -5.9, sg); box(1.4, 1, 4, sand, -1.6, 0.5, -6.5, sg); box(1.4, 1, 4, sand, 1.6, 0.5, -6.5, sg);
@@ -2836,8 +2843,9 @@ var W = (function () {
     if (hiMesh) scene.remove(hiMesh);
     hiMesh = new T.InstancedMesh(new T.BoxGeometry(bs * 1.03, bs * 1.03, bs * 1.03), new T.MeshBasicMaterial({ color: 0x7CFF6B, transparent: true, opacity: 0.45, depthWrite: false }), 40); hiMesh.frustumCulled = false; hiMesh.count = 0; scene.add(hiMesh);
     flyMesh.geometry.dispose(); flyMesh.geometry = new T.BoxGeometry(bs * 0.985, bs * 0.985, bs * 0.985);
-    if (!shared.pyrSign) shared.pyrSign = sign('PYRAMID', '피라미드 · 초록 칸 근처에서 Q', 0, N * bs / 2 + 4, 0, { w: 8, h: 2.4, y: 3.6, bg: '#5D4037', acc: '#FFD54F' });
+    if (!shared.pyrSign) shared.pyrSign = sign('PYRAMID', '피라미드 · 블록을 들고 가까이서 E', 0, N * bs / 2 + 4, 0, { w: 8, h: 2.4, y: 3.6, bg: '#5D4037', acc: '#FFD54F' });
     else shared.pyrSign.position.z = N * bs / 2 + 4;
+    buildPyrDeco();
   }
   function slotC(i, gold) { if (gold) return C(0xFFD54F); const cs = [0xE8C987, 0xDDBA76, 0xF0D49A, 0xD6B06C, 0xE3C07E]; return C(cs[Math.floor(hashN(i + 7) * cs.length)]); }
   const slotV = i => [st.slotPos[i * 3], st.slotPos[i * 3 + 1], st.slotPos[i * 3 + 2]];
@@ -2862,13 +2870,13 @@ var W = (function () {
     let ch = false; for (let i = 0; i < n; i++) if (goldSet.has(i) !== !!st.gold[i]) { pyrMesh.setColorAt(i, slotC(i, goldSet.has(i))); ch = true; } if (ch) pyrMesh.instanceColor.needsUpdate = true;
     st.gold = {}; goldSet.forEach(i => st.gold[i] = 1); st.n = n;
     const done = n >= st.total; if (done !== st.done) { st.done = done; setCrown(done); }
+    updatePyrDeco();
   }
   function setHighlight(k) { if (!hiMesh) return; const M = _M(); let c = 0; for (let i = st.n; i < Math.min(st.total, st.n + Math.max(0, Math.min(40, k))); i++) { M.makeTranslation(st.slotPos[i * 3], st.slotPos[i * 3 + 1], st.slotPos[i * 3 + 2]); hiMesh.setMatrixAt(c++, M); } hiMesh.count = c; hiMesh.instanceMatrix.needsUpdate = true; }
   function setRubble(n) { if (!rubMesh) return; rubMesh.count = Math.min(90, n || 0); shared.rubSign.visible = (n || 0) > 0; }
   function heightAt(x, z) {
     let h = 0;
-    for (const [mx, mz, w, d, y] of [[POS.gym[0], POS.gym[1], 15, 7.5, 0.3], [POS.upg[0], POS.upg[1], 15, 7.5, 0.3]]) if (Math.abs(x - mx) < w && Math.abs(z - mz) < d) h = y;
-    if (Math.hypot(x - POS.range[0], z - POS.range[1]) < 9) h = 0.4;
+    for (const f of FLOORS) if (inObb(f, x, z, 0)) h = f.y;
     if (Math.abs(x - POS.spawn[0]) < 2.5 && Math.abs(z - POS.spawn[1] - 2) < 2.5) h = 0.3;
     if (!st.N) return h; const half = st.N * st.bs / 2;
     if (Math.abs(x) < half + 1.5 && Math.abs(z) < half + 1.5) h = Math.max(h, 0.2);
@@ -2912,6 +2920,8 @@ var W = (function () {
   const ANIM = ['idle', 'walk', 'mine', 'place', 'machine', 'dance', 'jump', 'think', 'cheer'];
   function updateRemote(pid, p) {
     const av = avatars[pid]; if (!av || !p) return;
+    if (av.init && (p.c || 0) > (av.c || 0) && Math.hypot((p.x || 0) - POS.quarry[0], (p.z || 0) - POS.quarry[1]) < QUARRY_R + 3) takeBlocks((p.c || 0) - (av.c || 0), p.x || 0, p.z || 0, pid);
+    av.j = p.j || 0;
     av.tx = p.x || 0; av.tz = p.z || 0; av.ty = p.y || 0; av.trot = p.r || 0; av.anim = ANIM[p.a | 0] || 'idle'; av.tr = p.tr || ''; av.c = p.c || 0; av.g = p.g || 0; av.spd = p.s || 1;
     if (p.lu && p.lu !== av.luSeen) { if (av.luSeen) levelFx(av); av.luSeen = p.lu; }
     if (!av.init) { av.x = av.tx; av.z = av.tz; av.y = av.ty; av.rot = av.trot; av.init = true; }
@@ -2920,7 +2930,7 @@ var W = (function () {
   const MACH_ANIM = { spd: 'tread', str: 'bench', bpu: 'mine', bpl: 'place', rng: 'think' };
   function stepAvatar(av, dt, t) {
     let moveAmt = 0;
-    if (av.isMe) { av.x = me.x; av.z = me.z; av.y = me.y; av.rot = me.rot; av.anim = me.anim; av.tr = me.tr; av.c = me.carry; av.g = me.gold; moveAmt = me.move; av.spd = me.spdMul; }
+    if (av.isMe) { av.x = me.x; av.z = me.z; av.y = me.y; av.rot = me.rot; av.anim = me.anim; av.tr = me.tr; av.c = me.carry; av.g = me.gold; moveAmt = me.move; av.spd = me.spdMul; av.j = me.held || 0; }
     else if (!av.frozen) {
       const k = 1 - Math.exp(-dt * 9), dx = av.tx - av.x, dz = av.tz - av.z, dist = Math.hypot(dx, dz);
       if (dist > 25) { av.x = av.tx; av.z = av.tz; } else { av.x += dx * k; av.z += dz * k; }
@@ -2932,7 +2942,9 @@ var W = (function () {
     if (m) { px = m.x; pz = m.z; py = m.y + (m.stat === 'spd' ? 0.27 : 0); rot = m.rot; modeA = MACH_ANIM[m.stat]; if (m.bar) m.bar.visible = false; }
     if (av.fin) { modeA = av.fin; moveAmt = av.fin === 'walk' ? 1 : 0; }
     else if (modeA === 'walk') modeA = moveAmt > 0.05 ? 'walk' : 'idle';
-    Avatar.animate(av.a, { mode: modeA, speed: moveAmt, rate: Math.min(1.6, 0.8 + (av.spd - 1) * 0.6), carry: (av.c + av.g) > 0 && !m }, dt, t);
+    const tot = (av.c || 0) + (av.g || 0), heavy = m ? 0 : Math.max(0, Math.min(1, (tot - 8) / 30));
+    syncHeld(av); if (av.held) av.held.visible = !m;
+    Avatar.animate(av.a, { mode: modeA, speed: moveAmt, rate: Math.min(1.8, 0.8 + (av.spd - 1) * 0.4) * (1 - heavy * 0.3), carry: tot > 0 && !m, hold: !!av.j && !m, heavy }, dt, t);
     av.root.position.set(px, py, pz); av.root.rotation.y = rot; av.root.visible = av.online !== false; av.blob.visible = !(m && m.stat === 'str');
     if (av.fxT > 0) { av.fxT -= dt; const k = 1 - av.fxT / 1.8; if (av.fxRing) { av.fxRing.scale.setScalar(0.4 + k * 2.6); av.fxRing.material.opacity = Math.max(0, 0.9 - k); av.fxRing.position.y = 0.2 + k * 2; } if (av.fxText) { av.fxText.position.y = Avatar.HEIGHT + 1.2 + k * 1.6; av.fxText.material.opacity = Math.min(1, av.fxT * 1.5); } if (av.fxT <= 0) { if (av.fxRing) av.root.remove(av.fxRing); if (av.fxText) av.root.remove(av.fxText); av.fxRing = av.fxText = null; } }
   }
@@ -2947,9 +2959,9 @@ var W = (function () {
   /* 블록을 머리 위로 들고 다님 (2×2씩 쌓임) */
   function drawCarry() {
     if (!carryMesh) return; const M = _M(), q = new T.Quaternion(), e = new T.Euler(), v = new T.Vector3(), sc = new T.Vector3(1, 1, 1), gold = C(0xFFD54F), sand = C(0xE2C38C);
-    let idx = 0; const top = Avatar.HEIGHT + 0.35;
+    let idx = 0; const top = Avatar.HEIGHT + 0.35; // 60개까지 실제 블록으로 표시
     for (const pid in avatars) {
-      const av = avatars[pid]; if (!av.root.visible) continue; const total = Math.min(40, (av.c || 0) + (av.g || 0)); if (!total || (av.anim === 'machine' && av.tr)) continue;
+      const av = avatars[pid]; if (!av.root.visible) continue; const total = Math.min(60, Math.max(0, (av.c || 0) + (av.g || 0) - (av.flyIn || 0))); if (!total || (av.anim === 'machine' && av.tr)) continue;
       const r = av.root.rotation.y, cs = Math.cos(r), sn = Math.sin(r), bob = av.a.body.position.y;
       for (let k = 0; k < total; k++) {
         const col = k % 2, row = Math.floor(k / 2) % 2, lvl = Math.floor(k / 4), lx = (col - 0.5) * 0.52, lz = (row - 0.5) * 0.52 + 0.05, ly = top + lvl * 0.52 + bob;
@@ -3124,12 +3136,15 @@ var W = (function () {
     let idx = 0, landed = 0;
     for (let k = flights.length - 1; k >= 0; k--) {
       const f = flights[k]; f.t += dt; if (f.t < 0) continue; const u = Math.min(1, f.t / f.dur);
+      if (f.toPid) { const av = avatars[f.toPid]; if (av) { const n = Math.max(0, Math.min(59, (av.c || 0) + (av.g || 0) - (av.flyIn || 1))); f.to = carryTop(av, n); } }
+      if (u >= 1 && f.mini) { flights.splice(k, 1); if (f.toPid && avatars[f.toPid]) avatars[f.toPid].flyIn = Math.max(0, (avatars[f.toPid].flyIn || 1) - 1); if (f.hit) burst(f.to[0], f.to[1], f.to[2], 12, [0xFF5A6E, 0xFFFFFF, 0xFFD54F], 4, { life: 0.5 }); else burst(f.to[0], f.to[1], f.to[2], 4, [0xFFF3B0, 0xE2C38C], 1.5, { life: 0.4 }); continue; }
       if (u >= 1) { flights.splice(k, 1); if (f.fall) burst(f.to[0], f.to[1], f.to[2], 6, [0xD9B070, 0xC9A46A], 3, { life: 0.6 }); else { showSlot(f.i, true); landed++; if (landed < 4) burst(f.to[0], f.to[1] + st.bs / 2, f.to[2], 10, [0x7CFF6B, 0xFFFFFF], 3, { life: 0.5 }); } continue; }
       const a = f.from, b = f.to; let y;
-      if (f.fall) { y = a[1] + (b[1] - a[1]) * u + Math.sin(u * Math.PI) * 6; e.set(u * f.spin[0], u * f.spin[1], 0); }
+      if (f.mini) { y = a[1] + (b[1] - a[1]) * u + Math.sin(u * Math.PI) * 1.6; e.set(u * 3, u * 2, 0); }
+      else if (f.fall) { y = a[1] + (b[1] - a[1]) * u + Math.sin(u * Math.PI) * 6; e.set(u * f.spin[0], u * f.spin[1], 0); }
       else if (f.sky) { y = a[1] + (b[1] - a[1]) * u * u; e.set(0, (1 - u) * 3, 0); }
       else { y = a[1] + (b[1] - a[1]) * u + Math.sin(u * Math.PI) * (3 + Math.hypot(b[0] - a[0], b[2] - a[2]) * 0.12); e.set((1 - u) * 4, (1 - u) * 3, 0); }
-      v.set(a[0] + (b[0] - a[0]) * u, y, a[2] + (b[2] - a[2]) * u); q.setFromEuler(e); sc.setScalar(f.fall ? 0.9 : 0.6 + u * 0.4); M.compose(v, q, sc);
+      v.set(a[0] + (b[0] - a[0]) * u, y, a[2] + (b[2] - a[2]) * u); q.setFromEuler(e); sc.setScalar(f.mini ? f.s0 + (f.s1 - f.s0) * u : f.fall ? 0.9 : 0.6 + u * 0.4); M.compose(v, q, sc);
       if (idx < 400) { flyMesh.setMatrixAt(idx, M); flyMesh.setColorAt(idx, f.col); idx++; }
     }
     flyMesh.count = idx; flyMesh.instanceMatrix.needsUpdate = true; flyMesh.instanceColor.needsUpdate = true;
@@ -3174,7 +3189,7 @@ var W = (function () {
     me.move = mag;
     if (mag > 0.05) {
       const want = cam.lockMouse ? Math.atan2(fx, fz) : Math.atan2(mx, mz); let dr = want - me.rot; while (dr > Math.PI) dr -= Math.PI * 2; while (dr < -Math.PI) dr += Math.PI * 2; me.rot += dr * Math.min(1, dt * 14);
-      const v = me.spd * mag; tryMove(me.x + mx * v * dt, me.z); tryMove(me.x, me.z + mz * v * dt);
+      const v = me.spd * mag, ns = Math.max(1, Math.ceil(v * dt / 0.4)), sd = dt / ns; for (let i = 0; i < ns; i++) { tryMove(me.x + mx * v * sd, me.z); tryMove(me.x, me.z + mz * v * sd); }
       if (me.act !== 'mine' && me.act !== 'place') me.anim = me.ground ? 'walk' : 'jump'; me.tr = '';
     } else if (me.anim === 'walk') me.anim = 'idle';
     if (me.jumpQ && me.ground && !me.lock) { me.vy = 8.6; me.ground = false; if (sfx.jump) sfx.jump(); }
@@ -3189,6 +3204,7 @@ var W = (function () {
     if (lobbyOn) { const dx = nx - POS.spawn[0], dz = nz - POS.spawn[1], d = Math.hypot(dx, dz); if (d > LOBBY_R - 0.6) { nx = POS.spawn[0] + dx / d * (LOBBY_R - 0.6); nz = POS.spawn[1] + dz / d * (LOBBY_R - 0.6); } }
     for (const c of COLL) { const dx = nx - c[0], dz = nz - c[1], d = Math.hypot(dx, dz); if (d < c[2] + 0.45) { nx = c[0] + dx / (d || 1) * (c[2] + 0.45); nz = c[1] + dz / (d || 1) * (c[2] + 0.45); } }
     for (const b of BOXES) { if (b[5] != null) continue; if (nx > b[0] - 0.45 && nx < b[2] + 0.45 && nz > b[1] - 0.45 && nz < b[3] + 0.45 && me.y < b[4]) return false; }
+    if (obbBlocks(nx, nz, me.y)) return false;
     if (heightAt(nx, nz) > me.y + 0.55) return false;
     me.x = nx; me.z = nz; return true;
   }
@@ -3202,11 +3218,13 @@ var W = (function () {
     if (y < heightAt(x, z) + 0.2) return true;
     for (const b of BOXES) if (x > b[0] && x < b[2] && z > b[1] && z < b[3] && y < b[4] && y > (b[5] || 0)) return true;
     for (const c of COLL) if (c[2] > 2 && Math.hypot(x - c[0], z - c[1]) < c[2] && y < 14) return true;
+    for (const o of OBBS) if (o.gate == null && y < o.y1 && y > o.y0 && inObb(o, x, z, 0.1)) return true;
     return false;
   }
   function stepCamera(dt) {
     const topY = st.lay ? st.lay.layers.length * st.bs : 10;
     if (cam.cine && cam.cine.fin) { finCam(dt); shake(dt); return; }
+    if (rk.view >= 0 && mode === 'player' && boardCam(dt)) return;
     if (cam.cine) {
       const c = cam.cine; c.t += dt; const seg = Math.floor(c.t / 5) % 4, u = (c.t % 5) / 5, Rr = st.N * st.bs; let pos;
       if (seg === 0) pos = [Math.cos(u * 1.2) * Rr * 1.6, topY * 0.4 + 4, Math.sin(u * 1.2) * Rr * 1.6]; else if (seg === 1) pos = [Rr * 0.9 - u * Rr * 0.4, 2.5 + u * topY, Rr * 0.9]; else if (seg === 2) pos = [Math.cos(2 + u * 2) * Rr * 0.7, topY + 10 - u * 4, Math.sin(2 + u * 2) * Rr * 0.7]; else pos = [Math.cos(4 + u) * Rr * 2.2, topY * 1.4 + 10, Math.sin(4 + u) * Rr * 2.2];
@@ -3242,14 +3260,414 @@ var W = (function () {
     const raw = clock.getDelta(), dt = Math.min(0.1, raw), t = clock.elapsedTime; fpsAcc += raw; // 느린 태블릿(10~20fps)에서도 이동 속도 유지 fpsN++; if (fpsAcc > 1) { api.fps = Math.round(fpsN / fpsAcc); fpsAcc = 0; fpsN = 0; }
     if (dt > 0.05) { stepMe(dt / 2); stepMe(dt / 2); } else stepMe(dt); // 큰 프레임 간격은 두 번에 나눠 충돌 판정
     for (const pid in avatars) stepAvatar(avatars[pid], dt, t);
-    drawCarry(); stepFinale(dt); stepFlights(dt); stepParticles(dt); stepEvents(dt, t); stepCamera(dt);
+    drawPiles(dt); drawCarry(); stepFinale(dt); stepFlights(dt); stepParticles(dt); stepEvents(dt, t); stepRank(dt, t); stepPyrDeco(dt, t); stepGyms(dt, t); stepYard(dt, t); stepCamera(dt);
     if (SH() && shared.sun) { const fx = mode === 'player' ? me.x : 0, fz = mode === 'player' ? me.z : 0; shared.sun.position.set(fx + 70, 110, fz + 50); shared.sun.target.position.set(fx, 0, fz); }
     if (on.frame) on.frame(dt, t); R.render(scene, camera);
+  }
+
+  /* =====================================================================
+     랭킹 광장 · 채석장 블록 더미 · 시설 정보 화면 · 피라미드 장식 · 표지판
+  ===================================================================== */
+  const MEDAL = ['#FFD54F', '#CFD8DC', '#E0915A'];
+  const rk = { boards: [], pod: [], sig: '', podSig: '', view: -1, near: 0, count: 4, beams: [], cones: [], trophy: null, R0: 15 };
+  function canvasBoard(w, h) { const c = document.createElement('canvas'); c.width = w; c.height = h; const t = new T.CanvasTexture(c); t.anisotropy = 4; return { c, g: c.getContext('2d'), t }; }
+  function rrect(g, x, y, w, h, r) { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); }
+  /* 작은 캐릭터 얼굴 아이콘 (외형 색으로) */
+  function miniFig(g, x, y, s, look) {
+    const l = look || {}; g.fillStyle = l.topC || '#1E88E5'; rrect(g, x - s * 0.55, y + s * 0.15, s * 1.1, s * 0.75, s * 0.12); g.fill();
+    g.fillStyle = l.skin || '#FCD5B5'; rrect(g, x - s * 0.42, y - s * 0.62, s * 0.84, s * 0.8, s * 0.16); g.fill();
+    if (l.hair && l.hair !== 'none') { g.fillStyle = l.hairC || '#3B2416'; rrect(g, x - s * 0.45, y - s * 0.68, s * 0.9, s * 0.26, s * 0.1); g.fill(); }
+    if (l.hat && l.hat !== 'none') { g.fillStyle = l.hat === 'crown' ? '#FFD54F' : (l.hatC || '#E53935'); rrect(g, x - s * 0.47, y - s * 0.84, s * 0.94, s * 0.24, s * 0.08); g.fill(); }
+    g.fillStyle = '#1a1438'; g.beginPath(); g.arc(x - s * 0.16, y - s * 0.24, s * 0.07, 0, 7); g.arc(x + s * 0.16, y - s * 0.24, s * 0.07, 0, 7); g.fill();
+  }
+  function drawRankBoard(b, d) {
+    const g = b.g, W2 = b.c.width, H2 = b.c.height; g.clearRect(0, 0, W2, H2);
+    const gr = g.createLinearGradient(0, 0, 0, H2); gr.addColorStop(0, '#1B1740'); gr.addColorStop(1, '#0E0B26'); g.fillStyle = gr; g.fillRect(0, 0, W2, H2);
+    g.fillStyle = d.col || '#7E57C2'; g.fillRect(0, 0, W2, 132); g.fillStyle = 'rgba(255,255,255,.18)'; g.fillRect(0, 0, W2, 8);
+    g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = '#FFFFFF'; g.font = `900 50px Jua, ${FONT}`; g.fillText(d.title, W2 / 2, 54);
+    g.font = '700 25px Jua, sans-serif'; g.fillStyle = 'rgba(255,255,255,.9)'; g.fillText(d.sub || '', W2 / 2, 104);
+    if (d.off) { g.font = '700 34px Jua, sans-serif'; g.fillStyle = '#B9B4E0'; g.fillText(d.off, W2 / 2, H2 / 2); b.t.needsUpdate = true; return; }
+    const rows = d.rows || [], rh = 60, y0 = 150;
+    if (!rows.length) { g.font = '700 32px Jua, sans-serif'; g.fillStyle = '#B9B4E0'; g.fillText('아직 기록이 없어요', W2 / 2, H2 / 2 - 20); g.font = '700 24px Jua, sans-serif'; g.fillText(d.empty || '첫 번째 주인공이 되어 봐요!', W2 / 2, H2 / 2 + 24); }
+    rows.forEach((r, i) => {
+      const y = y0 + i * rh; g.fillStyle = i < 3 ? MEDAL[i] + '2E' : (i % 2 ? 'rgba(255,255,255,.04)' : 'rgba(255,255,255,.08)'); rrect(g, 14, y + 3, W2 - 28, rh - 6, 12); g.fill();
+      if (r.me) { g.lineWidth = 5; g.strokeStyle = '#4FE3FF'; rrect(g, 14, y + 3, W2 - 28, rh - 6, 12); g.stroke(); }
+      g.fillStyle = i < 3 ? MEDAL[i] : '#3A3F66'; g.beginPath(); g.arc(50, y + rh / 2, 22, 0, 7); g.fill(); g.fillStyle = i < 3 ? '#3A2A00' : '#FFFFFF'; g.font = `900 26px ${FONT}`; g.textAlign = 'center'; g.fillText(String(i + 1), 50, y + rh / 2 + 1);
+      miniFig(g, 102, y + rh / 2 + 2, 34, r.look);
+      g.textAlign = 'left'; g.fillStyle = r.me ? '#7CF3FF' : (i < 3 ? MEDAL[i] : '#FFFFFF'); g.font = '700 30px Jua, sans-serif'; let nm = String(r.nick || ''); while (g.measureText(nm).width > W2 - 330 && nm.length > 1) nm = nm.slice(0, -1); g.fillText(nm + (nm !== String(r.nick || '') ? '…' : ''), 134, y + rh / 2 - (r.sub ? 8 : 0));
+      if (r.sub) { g.font = '600 17px Jua, sans-serif'; g.fillStyle = 'rgba(255,255,255,.6)'; g.fillText(r.sub, 134, y + rh / 2 + 17); }
+      g.textAlign = 'right'; g.fillStyle = i < 3 ? MEDAL[i] : '#FFE08A'; g.font = `900 34px ${FONT}`; g.fillText(String(r.v), W2 - 74, y + rh / 2 + 1); g.font = '700 18px Jua, sans-serif'; g.fillStyle = 'rgba(255,255,255,.7)'; g.fillText(d.unit || '', W2 - 26, y + rh / 2 + 4);
+    });
+    const fy = H2 - 64; g.fillStyle = 'rgba(79,227,255,.14)'; rrect(g, 14, fy, W2 - 28, 50, 14); g.fill(); g.textAlign = 'center'; g.font = '700 26px Jua, sans-serif'; g.fillStyle = '#7CF3FF';
+    g.fillText(d.mine ? `내 순위  ${d.mine.rank}위 · ${d.mine.v}${d.unit || ''}` : (d.self === false ? '' : '나는 아직 기록이 없어요 · 도전!'), W2 / 2, fy + 26);
+    b.t.needsUpdate = true;
+  }
+  function buildRankZone() {
+    const [rx, rz] = POS.rank, R0 = rk.R0;
+    const ft = canvasTex(256, 256, (c, w, h) => { c.fillStyle = '#2A2350'; c.fillRect(0, 0, w, h); c.strokeStyle = '#3D3474'; c.lineWidth = 4; for (let i = 0; i <= 8; i++) { c.beginPath(); c.moveTo(i * 32, 0); c.lineTo(i * 32, h); c.stroke(); c.beginPath(); c.moveTo(0, i * 32); c.lineTo(w, i * 32); c.stroke(); } });
+    ft.wrapS = ft.wrapT = T.RepeatWrapping; ft.repeat.set(5, 5);
+    const fl = new T.Mesh(new T.CircleGeometry(R0, 56), new T.MeshLambertMaterial({ map: ft })); fl.rotation.x = -Math.PI / 2; fl.position.set(rx, 0.06, rz); fl.receiveShadow = true; scene.add(fl);
+    const ring = new T.Mesh(new T.RingGeometry(R0 - 0.7, R0, 72), basic(0xFFD54F, { transparent: true, opacity: 0.9, side: T.DoubleSide })); ring.rotation.x = -Math.PI / 2; ring.position.set(rx, 0.08, rz); scene.add(ring); rk.ring = ring;
+    const star = new T.Mesh(new T.RingGeometry(3.6, 4.2, 5), basic(0xFFD54F, { transparent: true, opacity: 0.55, side: T.DoubleSide })); star.rotation.x = -Math.PI / 2; star.position.set(rx, 0.09, rz + 2); scene.add(star); rk.star = star;
+    // 입구 아치 (피라미드 쪽)
+    const ax = rx, az = rz + R0 - 0.6; [-6, 6].forEach(o => { box(1.1, 8.5, 1.1, lam(0x4A3C8C), ax + o, 4.25, az); const b2 = new T.Mesh(new T.SphereGeometry(0.6, 12, 8), new T.MeshLambertMaterial({ color: 0xFFD54F, emissive: 0xB07800 })); b2.position.set(ax + o, 8.9, az); scene.add(b2); COLL.push([ax + o, az, 0.8]); });
+    sign('LEADERBOARD', '랭킹 광장 · 우리 반 순위를 직접 보러 와요', ax, az, 0, { w: 13.5, h: 2.7, y: 9.6, posts: false, bg: '#2E1A47', acc: '#FFD54F' });
+    // 시상대 1·2·3
+    const pz = rz + 1.2, steps = [[0, 2.1, 0], [-2.7, 1.45, 1], [2.7, 0.95, 2]];
+    steps.forEach(([ox, h, i]) => {
+      box(2.5, h, 2.3, lam([0xFFC93C, 0xB8C4CC, 0xC9783F][i]), rx + ox, h / 2, pz); box(2.7, 0.14, 2.5, lam(0xFFFFFF), rx + ox, h + 0.07, pz);
+      const nt = canvasTex(128, 128, (c, w2, h2) => { c.fillStyle = 'rgba(0,0,0,0)'; c.clearRect(0, 0, w2, h2); c.font = `900 110px ${FONT}`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.lineWidth = 10; c.strokeStyle = '#3A2A00'; c.strokeText(String(i + 1), 64, 70); c.fillStyle = '#FFFFFF'; c.fillText(String(i + 1), 64, 70); });
+      const np = new T.Mesh(new T.PlaneGeometry(1.2, 1.2), new T.MeshBasicMaterial({ map: nt, transparent: true })); np.position.set(rx + ox, Math.min(h - 0.5, 1.2), pz + 1.17); scene.add(np);
+      COLL.push([rx + ox, pz, 1.35]); rk.pod.push({ x: rx + ox, y: h + 0.14, z: pz, i, pid: null, lk: '', a: null, tag: null });
+    });
+    // 게시판 4개 (반원)
+    for (let k = 0; k < 4; k++) {
+      const g = new T.Group(), b = canvasBoard(640, 840);
+      box(6.9, 9.0, 0.45, lam(0x1A1533), 0, 5.6, -0.25, g); box(7.1, 0.35, 0.6, lam(0xFFD54F), 0, 10.2, -0.2, g); box(7.1, 0.25, 0.6, lam(0xFFD54F), 0, 1.0, -0.2, g);
+      [-3.1, 3.1].forEach(px => box(0.45, 1.2, 0.45, lam(0x2B2350), px, 0.6, -0.25, g));
+      const scr = new T.Mesh(new T.PlaneGeometry(6.4, 8.4), new T.MeshBasicMaterial({ map: b.t })); scr.position.set(0, 5.6, 0.0); g.add(scr);
+      const lightBar = new T.Mesh(new T.BoxGeometry(6.6, 0.18, 0.2), new T.MeshBasicMaterial({ color: 0xFFE08A })); lightBar.position.set(0, 10.45, 0.05); g.add(lightBar);
+      scene.add(g); rk.boards.push({ g, b, scr, bar: lightBar, sig: '', x: 0, z: 0, ry: 0, vis: true, coll: [] });
+    }
+    layoutBoards(4);
+    // 트로피 (멀리서도 보이는 표식) + 빛기둥
+    const tg = new T.Group(), gold = new T.MeshLambertMaterial({ color: 0xFFD54F, emissive: 0x8A5A00 });
+    const cup = new T.Mesh(new T.CylinderGeometry(1.5, 0.7, 2.2, 20, 1, true), gold); cup.material.side = T.DoubleSide; cup.position.y = 2.6; tg.add(cup);
+    [-1, 1].forEach(s => { const hd = new T.Mesh(new T.TorusGeometry(0.6, 0.16, 8, 16, Math.PI), gold); hd.position.set(s * 1.5, 2.7, 0); hd.rotation.z = s > 0 ? -Math.PI / 2 : Math.PI / 2; tg.add(hd); });
+    const stem = new T.Mesh(new T.CylinderGeometry(0.28, 0.4, 1.2, 12), gold); stem.position.y = 1.0; tg.add(stem); const bs2 = new T.Mesh(new T.BoxGeometry(2, 0.5, 2), lam(0x3A2A6A)); bs2.position.y = 0.25; tg.add(bs2);
+    const starS = new T.Mesh(new T.OctahedronGeometry(0.6, 0), new T.MeshBasicMaterial({ color: 0xFFFFFF })); starS.position.y = 4.4; tg.add(starS);
+    tg.position.set(rx, 12.5, rz - 10.5); tg.scale.setScalar(1.3); scene.add(tg); rk.trophy = tg;
+    [[-8.5, -9], [8.5, -9], [0, -11]].forEach(([ox, oz], i) => { const bm = new T.Mesh(new T.CylinderGeometry(i === 2 ? 1.2 : 0.8, i === 2 ? 1.2 : 0.8, 70, 14, 1, true), new T.MeshBasicMaterial({ color: i === 2 ? 0xFFE27A : 0xB388FF, transparent: true, opacity: 0.22, blending: T.AdditiveBlending, depthWrite: false, side: T.DoubleSide })); bm.position.set(rx + ox, 35, rz + oz); scene.add(bm); rk.beams.push(bm); });
+    // 가로등 + 시상대 조명
+    for (let i = 0; i < 10; i++) {
+      const a = Math.PI * 0.12 + (i / 9) * Math.PI * 0.76, x = rx + Math.cos(a) * (R0 - 1.4) * (i % 2 ? 1 : 1), z = rz + Math.sin(a) * (R0 - 1.4);
+      if (Math.abs(x - rx) < 7.5 && z > rz + R0 - 3) continue;
+      box(0.3, 5, 0.3, lam(0x2B2350), x, 2.5, z); const bulb = new T.Mesh(new T.SphereGeometry(0.45, 10, 8), new T.MeshBasicMaterial({ color: i % 2 ? 0xFFD54F : 0xE1BEE7 })); bulb.position.set(x, 5.2, z); scene.add(bulb); COLL.push([x, z, 0.4]);
+    }
+    [-7, 7].forEach(o => { const cone = new T.Mesh(new T.ConeGeometry(3.2, 10, 20, 1, true), new T.MeshBasicMaterial({ color: 0xFFF3B0, transparent: true, opacity: 0.08, blending: T.AdditiveBlending, depthWrite: false, side: T.DoubleSide })); cone.position.set(rx + o * 0.55, 6, pz); cone.rotation.z = o > 0 ? -0.5 : 0.5; scene.add(cone); rk.cones.push(cone); });
+  }
+  /* 게시판 배치: n개를 남쪽 반원에 고르게 */
+  function layoutBoards(n) {
+    rk.count = n; const [rx, rz] = POS.rank, d = 10.6;
+    rk.boards.forEach((B, k) => {
+      B.coll.forEach(c => { const i = COLL.indexOf(c); if (i >= 0) COLL.splice(i, 1); }); B.coll = [];
+      B.vis = k < n; B.g.visible = B.vis; if (!B.vis) return;
+      const th = (k - (n - 1) / 2) * (n > 2 ? 0.66 : 0.72), x = rx + Math.sin(th) * d, z = rz - Math.cos(th) * d, ry = Math.atan2(rx - x, rz - z);
+      B.g.position.set(x, 0, z); B.g.rotation.y = ry; B.x = x; B.z = z; B.ry = ry;
+      [-2.4, 0, 2.4].forEach(o => { const c = [x + Math.cos(ry) * o, z - Math.sin(ry) * o, 1.0]; COLL.push(c); B.coll.push(c); });
+    });
+  }
+  /* 랭킹 데이터 반영: d = { boards:[{title,sub,col,unit,rows,mine,empty,off}], top3:[{pid,nick,look}] } */
+  function setRanks(d) {
+    if (!d) return; const n = d.boards.length; if (n !== rk.count) { layoutBoards(n); rk.boards.forEach(B => B.sig = ''); }
+    d.boards.forEach((bd, k) => { const B = rk.boards[k]; if (!B) return; const s = JSON.stringify(bd); if (s !== B.sig) { B.sig = s; drawRankBoard(B.b, bd); B.bar.material.color.set(bd.col || '#FFE08A'); } });
+    const ps = JSON.stringify((d.top3 || []).map(p => [p.pid, p.nick, p.look]));
+    if (ps !== rk.podSig) {
+      rk.podSig = ps;
+      rk.pod.forEach((P, i) => {
+        const p = (d.top3 || [])[i], lk = p ? JSON.stringify(p.look || {}) + p.nick : '';
+        if (P.lk === lk) return; P.lk = lk;
+        if (P.a) { scene.remove(P.a.root); Avatar.dispose && Avatar.dispose(P.a); P.a = null; }
+        if (!p) return;
+        const a = Avatar.build(p.look); a.root.position.set(P.x, P.y, P.z); a.root.rotation.y = 0; scene.add(a.root);
+        const tg = nameTag(`${i + 1}위 ${p.nick}`, false); tg.material.color.set(MEDAL[i]); tg.position.y = Avatar.HEIGHT + 0.6; a.root.add(tg);
+        a.ph = i * 1.7; P.a = a; P.pid = p.pid;
+      });
+    }
+  }
+  function stepRank(dt, t) {
+    const [rx, rz] = POS.rank, dme = mode === 'player' ? Math.hypot(me.x - rx, me.z - rz) : 40;
+    const want = dme < rk.R0 + 14 ? 1 : 0; rk.near += (want - rk.near) * Math.min(1, dt * 2);
+    if (rk.trophy) { rk.trophy.rotation.y += dt * 0.7; rk.trophy.position.y = 12.5 + Math.sin(t * 1.4) * 0.35; }
+    const vw = rk.view < 0; rk.beams.forEach(b => b.visible = vw); rk.cones.forEach(c => c.visible = vw);
+    rk.beams.forEach((b, i) => { b.material.opacity = 0.14 + Math.sin(t * 2 + i) * 0.05 + rk.near * 0.12; });
+    rk.cones.forEach((c, i) => { c.material.opacity = 0.03 + rk.near * (0.1 + Math.sin(t * 3 + i) * 0.03); });
+    if (rk.ring) rk.ring.material.opacity = 0.6 + Math.sin(t * 3) * 0.25; if (rk.star) rk.star.rotation.z += dt * 0.4;
+    rk.boards.forEach((B, i) => { if (B.vis) B.bar.material.opacity = 1; });
+    rk.pod.forEach((P, i) => { if (!P.a) return; Avatar.animate(P.a, { mode: i === 0 ? 'dance' : 'cheer' }, dt, t + i); if (i > 0) P.a.cheerT = 1; });
+  }
+  function nearBoard() {
+    if (mode !== 'player') return -1; const [rx, rz] = POS.rank; if (Math.hypot(me.x - rx, me.z - rz) > rk.R0 + 1) return -1;
+    let best = -1, bd = 9.5; rk.boards.forEach((B, k) => { if (!B.vis) return; const d = Math.hypot(me.x - B.x, me.z - B.z); if (d < bd) { bd = d; best = k; } }); return best;
+  }
+  function viewBoard(k) {
+    if (k == null || k < 0) { rk.view = -1; me.lock = false; return -1; }
+    k = ((k % rk.count) + rk.count) % rk.count; rk.view = k; me.lock = true; return k;
+  }
+  function boardCam(dt) {
+    const B = rk.boards[rk.view]; if (!B) { rk.view = -1; return false; }
+    const nx = Math.sin(B.ry), nz = Math.cos(B.ry), asp = camera.aspect || 1.6, dist = asp < 1.2 ? 12 : 9.2;
+    const tx = B.x + nx * dist, ty = 5.6, tz = B.z + nz * dist, k = 1 - Math.exp(-dt * 5);
+    camera.position.set(camera.position.x + (tx - camera.position.x) * k, camera.position.y + (ty - camera.position.y) * k, camera.position.z + (tz - camera.position.z) * k);
+    camera.lookAt(B.x, 5.6, B.z); return true;
+  }
+
+  /* ---------------- 채석장: 실제로 줄어들고 다시 채워지는 블록 더미 ---------------- */
+  const piles = []; let pileMesh = null; const PILE_MAX = 18, PILE_COLS = [0xE2C38C, 0xD9B57A, 0xEACF9A, 0xC9A46A, 0xF0D9A8, 0xBF9A68, 0xE8BE84];
+  function buildPiles() {
+    const [qx, qz] = POS.quarry; pileMesh = new T.InstancedMesh(new T.BoxGeometry(1, 1, 1), lam(0xffffff), 6 * PILE_MAX); pileMesh.frustumCulled = false; initColors(pileMesh, 6 * PILE_MAX); if (SH()) { pileMesh.castShadow = true; pileMesh.receiveShadow = true; } scene.add(pileMesh);
+    for (let p = 0; p < 6; p++) {
+      const a = p / 6 * Math.PI * 2 + 0.35, x = qx + Math.cos(a) * 5.4, z = qz + Math.sin(a) * 5.4; box(3.7, 0.28, 3.7, lam(0x8B5A2B), x, 0.14, z); COLL.push([x, z, 1.75]);
+      const slots = []; let k = 0;
+      for (let L = 0; L < 2; L++) for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) { const s = 0.88 + hashN(p * 40 + k) * 0.26; slots.push({ x: x + (i - 1) * 1.15, y: 0.28 + 0.53 + L * 1.06, z: z + (j - 1) * 1.15, s, ry: (hashN(p * 40 + k + 7) - 0.5) * 0.4, col: PILE_COLS[Math.floor(hashN(p * 31 + k) * PILE_COLS.length)] }); k++; }
+      piles.push({ x, z, n: PILE_MAX, slots, reg: 0, dirty: true });
+    }
+  }
+  function drawPiles(dt) {
+    if (!pileMesh) return; const M = _M(), q = new T.Quaternion(), e = new T.Euler(), v = new T.Vector3(), sc = new T.Vector3(); let any = false;
+    piles.forEach((P, p) => {
+      if (P.n < PILE_MAX) { P.reg += dt; if (P.reg > 2.5) { P.reg = 0; P.n++; P.dirty = true; P.pop = P.n - 1; } }
+      if (!P.dirty) return; P.dirty = false; any = true;
+      P.slots.forEach((s, k) => { const vis = k < P.n; e.set(0, s.ry, 0); q.setFromEuler(e); v.set(s.x, s.y, s.z); sc.setScalar(vis ? s.s : 0.0001); M.compose(v, q, sc); pileMesh.setMatrixAt(p * PILE_MAX + k, M); pileMesh.setColorAt(p * PILE_MAX + k, C(s.col)); });
+      if (P.pop != null) { const s = P.slots[P.pop]; burst(s.x, s.y + 0.4, s.z, 5, [0xFFF3B0, 0xE2C38C], 2, { life: 0.5 }); P.pop = null; }
+    });
+    if (any) { pileMesh.instanceMatrix.needsUpdate = true; pileMesh.instanceColor.needsUpdate = true; }
+  }
+  /* cnt개를 가까운 더미에서 꺼내 그 캐릭터 손(머리 위 더미)으로 날림 */
+  function takeBlocks(cnt, x, z, pid) {
+    if (!pileMesh || !(cnt > 0)) return; const av = avatars[pid]; const order = piles.map((P, i) => [Math.hypot(P.x - x, P.z - z), i]).sort((a, b) => a[0] - b[0]).map(a => a[1]);
+    for (let k = 0; k < cnt; k++) {
+      let from = null, col = C(0xE2C38C), s0 = 1;
+      for (const i of order.slice(0, 3)) { const P = piles[i]; if (P.n > 0) { const s = P.slots[P.n - 1]; P.n--; P.dirty = true; P.reg = Math.min(P.reg, 0); from = [s.x, s.y, s.z]; col = C(s.col); s0 = s.s; break; } }
+      if (!from) { const a = Math.atan2(z - POS.quarry[1], x - POS.quarry[0]); from = [POS.quarry[0] + Math.cos(a) * 9, 1.2, POS.quarry[1] + Math.sin(a) * 9]; }
+      flights.push({ i: -1, mini: true, toPid: pid, from, to: from.slice(), t: -k * 0.09 - 0.18, dur: 0.5, col, s0: s0 / st.bs, s1: 0.5 / st.bs });
+      if (av) av.flyIn = (av.flyIn || 0) + 1;
+    }
+    if (av && av.isMe && sfx.pick) setTimeout(() => sfx.pick(), 120);
+  }
+  function carryTop(av, k) { const lvl = Math.floor(k / 4), col = k % 2, row = Math.floor(k / 2) % 2, r = av.root.rotation.y, cs = Math.cos(r), sn = Math.sin(r), lx = (col - 0.5) * 0.52, lz = (row - 0.5) * 0.52 + 0.05; return [av.root.position.x + lx * cs + lz * sn, av.root.position.y + Avatar.HEIGHT + 0.35 + lvl * 0.52, av.root.position.z - lx * sn + lz * cs]; }
+
+  /* ---------------- 피라미드: 월드 안 진행률 전광판 · 단계별 장식 ---------------- */
+  const pdeco = { g: null, board: null, sig: '', st: -1, torches: [], flags: [], glow: [] };
+  function buildPyrDeco() {
+    if (pdeco.g) { scene.remove(pdeco.g); pdeco.torches = []; pdeco.flags = []; pdeco.glow = []; }
+    const g = new T.Group(), half = st.N * st.bs / 2; pdeco.g = g; scene.add(g);
+    // 진행률 전광판 (시작 광장 쪽에서 보이게)
+    const bx = -(half + 6), bz = half + 6, b = canvasBoard(768, 400), bg = new T.Group();
+    box(8.4, 4.6, 0.35, lam(0x2E1A47), 0, 5.6, 0, bg); [-3.6, 3.6].forEach(px => box(0.4, 3.6, 0.4, lam(0x5D4037), px, 1.8, 0, bg));
+    const f = new T.Mesh(new T.PlaneGeometry(8, 4.2), new T.MeshBasicMaterial({ map: b.t })); f.position.set(0, 5.6, 0.19); bg.add(f); const bk = f.clone(); bk.rotation.y = Math.PI; bk.position.z = -0.19; bg.add(bk);
+    bg.position.set(bx, 0, bz); bg.rotation.y = Math.atan2(POS.spawn[0] - bx, POS.spawn[1] - bz); g.add(bg); COLL.push([bx, bz, 1.0]); pdeco.board = b; pdeco.sig = '';
+    // 25%: 모서리 횃불
+    [[1, 1], [-1, 1], [1, -1], [-1, -1]].forEach(([a, c]) => {
+      const t2 = new T.Group(); box(0.5, 3.2, 0.5, lam(0x6D4C41), 0, 1.6, 0, t2); box(0.9, 0.5, 0.9, lam(0x3E2723), 0, 3.4, 0, t2);
+      const fl = new T.Sprite(new T.SpriteMaterial({ map: dotTex(), color: 0xFF9A3C, transparent: true, blending: T.AdditiveBlending, depthWrite: false })); fl.position.y = 4.1; fl.scale.set(1.6, 2.2, 1); t2.add(fl);
+      t2.position.set(a * (half + 2.2), 0, c * (half + 2.2)); t2.visible = false; g.add(t2); pdeco.torches.push({ g: t2, fl });
+    });
+    // 50%: 각 변 가운데 깃발
+    [[0, 1], [0, -1], [1, 0], [-1, 0]].forEach(([a, c], i) => {
+      const fg = new T.Group(); cyl(0.12, 0.12, 7, 8, lam(0xEEEEEE), 0, 3.5, 0, fg);
+      const flag = new T.Mesh(new T.PlaneGeometry(2.4, 1.5, 6, 1), new T.MeshLambertMaterial({ color: [0xE53935, 0x1E88E5, 0xFDD835, 0x43A047][i], side: T.DoubleSide })); flag.position.set(1.2, 6.1, 0); fg.add(flag);
+      fg.position.set(a * (half + 3), 0, c * (half + 3)); fg.visible = false; g.add(fg); pdeco.flags.push(flag);
+    });
+    // 75%: 황금 빛기둥 4개
+    [[1, 1], [-1, 1], [1, -1], [-1, -1]].forEach(([a, c]) => { const bm = new T.Mesh(new T.CylinderGeometry(0.7, 0.7, 40, 12, 1, true), new T.MeshBasicMaterial({ color: 0xFFE27A, transparent: true, opacity: 0.2, blending: T.AdditiveBlending, depthWrite: false, side: T.DoubleSide })); bm.position.set(a * 24, 30, c * 24); bm.visible = false; g.add(bm); pdeco.glow.push(bm); });
+    pdeco.st = -1; updatePyrDeco();
+  }
+  function updatePyrDeco() {
+    if (!pdeco.g || !st.lay) return; const n = Math.max(0, st.n), pct = n / Math.max(1, st.total), stage = pct >= 1 ? 4 : pct >= 0.75 ? 3 : pct >= 0.5 ? 2 : pct >= 0.25 ? 1 : 0;
+    if (stage !== pdeco.st) {
+      const up = pdeco.st >= 0 && stage > pdeco.st; pdeco.st = stage;
+      pdeco.torches.forEach(t2 => t2.g.visible = stage >= 1); pdeco.flags.forEach(f => f.parent.visible = stage >= 2); pdeco.glow.forEach(b => b.visible = stage >= 3);
+      if (up) { const half = st.N * st.bs / 2; [[1, 1], [-1, 1], [1, -1], [-1, -1]].forEach(([a, c]) => burst(a * (half + 2), 4, c * (half + 2), 50, [0xFFD54F, 0xFF9800, 0xFFFFFF], 8)); if (sfx.stage) sfx.stage(); }
+    }
+    let layer = 0; for (let i = 0; i < st.lay.layers.length; i++) if (n >= st.lay.layers[i].start) layer = i;
+    const s = `${n}|${st.total}`; if (s === pdeco.sig) return; pdeco.sig = s; const b = pdeco.board, g = b.g, W2 = 768, H2 = 400, p100 = Math.floor(pct * 100);
+    g.fillStyle = '#1B1035'; g.fillRect(0, 0, W2, H2); g.fillStyle = '#FFD54F'; g.fillRect(0, 0, W2, 12); g.fillRect(0, H2 - 12, W2, 12);
+    g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = '#FFD54F'; g.font = `900 46px ${FONT}`; g.fillText('PYRAMID PROGRESS', W2 / 2, 58);
+    g.fillStyle = '#FFFFFF'; g.font = `900 110px ${FONT}`; g.fillText(`${p100}%`, W2 / 2, 158);
+    g.fillStyle = 'rgba(255,255,255,.14)'; rrect(g, 40, 226, W2 - 80, 44, 22); g.fill(); const gr = g.createLinearGradient(40, 0, W2 - 40, 0); gr.addColorStop(0, '#FF9800'); gr.addColorStop(1, '#FFD54F'); g.fillStyle = gr; rrect(g, 40, 226, Math.max(44, (W2 - 80) * Math.min(1, pct)), 44, 22); g.fill();
+    [0.25, 0.5, 0.75].forEach(m => { g.fillStyle = pct >= m ? '#FFFFFF' : 'rgba(255,255,255,.35)'; g.fillRect(40 + (W2 - 80) * m - 2, 220, 4, 56); });
+    g.font = '700 32px Jua, sans-serif'; g.fillStyle = '#FFFFFF'; g.fillText(`${n} / ${st.total} 블록 · ${layer + 1}층 / ${st.lay.layers.length}층`, W2 / 2, 312);
+    g.font = '700 24px Jua, sans-serif'; g.fillStyle = '#FFE08A'; g.fillText(pct >= 1 ? '완성! 모두 고마워요!' : ['25%: 횃불이 켜져요', '50%: 깃발이 올라가요', '75%: 황금 빛기둥이 솟아요', '100%: 황금 왕관!'][stage], W2 / 2, 360);
+    b.t.needsUpdate = true;
+  }
+  function stepPyrDeco(dt, t) {
+    pdeco.torches.forEach((o, i) => { if (!o.g.visible) return; const k = 1 + Math.sin(t * 11 + i * 2) * 0.12 + Math.sin(t * 17 + i) * 0.08; o.fl.scale.set(1.6 * k, 2.2 * k, 1); if (Math.random() < dt * 6) burst(o.g.position.x, 4.4, o.g.position.z, 1, [0xFF9A3C, 0xFFD54F], 1.2, { life: 0.7, lift: 2 }); });
+    pdeco.flags.forEach((f, i) => { if (!f.parent.visible) return; const p = f.geometry.attributes.position; for (let j = 0; j < p.count; j++) { const x = p.getX(j); p.setZ(j, Math.sin(t * 4 + x * 2.4 + i) * 0.18 * (x + 1.2) / 2.4); } p.needsUpdate = true; });
+    pdeco.glow.forEach((b, i) => { if (b.visible) b.material.opacity = 0.14 + Math.sin(t * 2.4 + i) * 0.06; });
+  }
+
+  /* ---------------- 방향 표지판 ---------------- */
+  function signpost(x, z, list) {
+    const g = new T.Group(); cyl(0.18, 0.22, 2.6 + list.length * 0.72, 8, lam(0x6D4C41), 0, (2.6 + list.length * 0.72) / 2, 0, g);
+    list.forEach(([label, tx, tz, col], i) => {
+      const dx = tx - x, dz = tz - z, ry = Math.atan2(-dz, dx), arm = new T.Group(), tex = canvasTex(512, 96, (c, w, h) => { c.fillStyle = col; c.fillRect(0, 0, w, h); c.fillStyle = 'rgba(0,0,0,.25)'; c.fillRect(0, h - 10, w, 10); c.fillStyle = '#fff'; c.font = '700 50px Jua, sans-serif'; c.textAlign = 'left'; c.textBaseline = 'middle'; c.fillText(label, 26, h / 2); c.textAlign = 'right'; c.font = '700 34px Jua, sans-serif'; c.fillText(Math.round(Math.hypot(dx, dz)) + 'm', w - 70, h / 2 + 2); });
+      const shp = new T.Shape(); shp.moveTo(0, -0.3); shp.lineTo(2.9, -0.3); shp.lineTo(3.3, 0); shp.lineTo(2.9, 0.3); shp.lineTo(0, 0.3); shp.lineTo(0, -0.3);
+      const body = new T.Mesh(new T.ExtrudeGeometry(shp, { depth: 0.12, bevelEnabled: false }), lam(new T.Color(col).getHex())); body.position.z = -0.06; arm.add(body);
+      [0.07, -0.07].forEach((oz, s) => { const pl = new T.Mesh(new T.PlaneGeometry(2.85, 0.53), new T.MeshBasicMaterial({ map: tex })); pl.position.set(1.47, 0, oz); if (s) pl.rotation.y = Math.PI; arm.add(pl); });
+      arm.position.y = 2.4 + i * 0.72; arm.rotation.y = ry; g.add(arm);
+    });
+    g.position.set(x, 0, z); scene.add(g); COLL.push([x, z, 0.35]);
+  }
+  function buildSignposts() {
+    const P = POS, L = (n, p, c) => [n, p[0], p[1], c], G0 = POS.gyms[0], G6 = POS.gyms[6];
+    signpost(0, 35.5, [L('피라미드', P.pyr, '#8D6E63'), L('채석장', P.quarry, '#E65100'), L('작업장', P.work, '#1565C0'), L('헬스장 거리', G0, '#C2185B'), L('랭킹 광장', P.rank, '#4527A0')]);
+    signpost(-26, 18, [L('채석장', P.quarry, '#E65100'), L('작업장', P.work, '#1565C0'), L('피라미드', P.pyr, '#8D6E63'), L('랭킹 광장', P.rank, '#4527A0')]);
+    signpost(34, -2, [L('헬스장 거리', G0, '#C2185B'), L('LEGEND GYM', G6, '#7B1FA2'), L('피라미드', P.pyr, '#8D6E63'), L('랭킹 광장', P.rank, '#4527A0')]);
+    signpost(10, -38, [L('랭킹 광장', P.rank, '#4527A0'), L('피라미드', P.pyr, '#8D6E63'), L('채석장', P.quarry, '#E65100'), L('작업장', P.work, '#1565C0')]);
+  }
+
+
+
+  /* ---------------- 회전된 벽·바닥 (헬스장 건물) ---------------- */
+  const OBBS = [], FLOORS = []; let gymOwned = 0;
+  function obb(cx, cz, phi, lx, lz, hw, hd, y0, y1, gate) { const c = Math.cos(phi), s = Math.sin(phi), x = cx + lx * c + lz * s, z = cz - lx * s + lz * c; const o = { x, z, c, s, hw, hd, y0, y1, gate }; OBBS.push(o); return o; }
+  function inObb(o, px, pz, pad) { const dx = px - o.x, dz = pz - o.z, lx = dx * o.c - dz * o.s, lz = dx * o.s + dz * o.c; return Math.abs(lx) < o.hw + pad && Math.abs(lz) < o.hd + pad; }
+  function obbBlocks(px, pz, py) { for (const o of OBBS) { if (o.gate != null && gymOwned >= o.gate) continue; if (py < o.y1 && py + 1.6 > o.y0 && inObb(o, px, pz, 0.45)) return true; } return false; }
+
+  /* ---------------- 헬스장 7등급 ---------------- */
+  const GYM_STY = [
+    { wall: 0x8D6E63, roof: 0x6D4C41, f1: '#D9BC8C', f2: '#CBAA76', mach: 0x8D6E63, trim: 0x5D4037 },
+    { wall: 0x7A4A2A, roof: 0xB0703C, f1: '#5B3A26', f2: '#4A2E1E', mach: 0xC7783E, trim: 0xCD7F32 },
+    { wall: 0xE3E8EE, roof: 0x9EAAB4, f1: '#D6DCE2', f2: '#C3CBD3', mach: 0x90A4AE, trim: 0xCFD8DC },
+    { wall: 0xFFF3D6, roof: 0xE0A800, f1: '#2B2112', f2: '#3A2C14', mach: 0xFFC93C, trim: 0xFFC93C },
+    { wall: 0x0B3D2E, roof: 0x0E5A40, f1: '#0D2E24', f2: '#11382B', mach: 0x2BD889, trim: 0x2BFF88 },
+    { wall: 0x0D1B3D, roof: 0x16306B, f1: '#132B5A', f2: '#0F2148', mach: 0x6FE7FF, trim: 0x6FE7FF },
+    { wall: 0x2A0E4A, roof: 0x3D1466, f1: '#1C0833', f2: '#2A0E4A', mach: 0xC77DFF, trim: 0xFFD54F }
+  ];
+  const gyms = [], gymFx = [];
+  function buildGyms() { POS.gyms.forEach(([cx, cz, phi], t) => buildGymT(t, cx, cz, phi)); }
+  function buildGymT(t, cx, cz, phi) {
+    const G = GROW.GYMS[t], sy = GYM_STY[t], g = new T.Group(); g.position.set(cx, 0, cz); g.rotation.y = phi; scene.add(g);
+    const hw = 8, hd = 6, H = 6.2, wl = lam(sy.wall), tr = t >= 3 ? new T.MeshLambertMaterial({ color: sy.trim, emissive: new T.Color(sy.trim).multiplyScalar(t >= 4 ? 0.8 : 0.35) }) : lam(sy.trim);
+    const ft = canvasTex(256, 256, (c, w, h) => { for (let i = 0; i < 8; i++) for (let j = 0; j < 8; j++) { c.fillStyle = (i + j) % 2 ? sy.f1 : sy.f2; c.fillRect(i * 32, j * 32, 32, 32); } if (t === 4) { c.strokeStyle = '#2BFF88'; c.lineWidth = 2; for (let i = 0; i <= 8; i++) { c.beginPath(); c.moveTo(i * 32, 0); c.lineTo(i * 32, h); c.stroke(); c.beginPath(); c.moveTo(0, i * 32); c.lineTo(w, i * 32); c.stroke(); } } });
+    ft.wrapS = ft.wrapT = T.RepeatWrapping; ft.repeat.set(2, 1.5);
+    box(hw * 2, 0.3, hd * 2, lam(sy.roof), 0, 0.15, 0, g); const fl = new T.Mesh(new T.PlaneGeometry(hw * 2, hd * 2), new T.MeshLambertMaterial({ map: ft })); fl.rotation.x = -Math.PI / 2; fl.position.y = 0.31; fl.receiveShadow = true; g.add(fl);
+    FLOORS.push({ x: cx, z: cz, c: Math.cos(phi), s: Math.sin(phi), hw, hd, y: 0.3 });
+    if (t === 0) {
+      // 야외 기본 체육시설: 나무 울타리 + 차양
+      for (let x = -hw; x <= hw; x += 2) box(0.25, 1.2, 0.25, lam(0x6D4C41), x, 0.9, -hd, g);
+      for (let z = -hd; z <= hd; z += 2) { box(0.25, 1.2, 0.25, lam(0x6D4C41), -hw, 0.9, z, g); box(0.25, 1.2, 0.25, lam(0x6D4C41), hw, 0.9, z, g); }
+      box(hw * 2, 0.15, 0.15, lam(0x8D6E63), 0, 1.3, -hd, g); box(0.15, 0.15, hd * 2, lam(0x8D6E63), -hw, 1.3, 0, g); box(0.15, 0.15, hd * 2, lam(0x8D6E63), hw, 1.3, 0, g);
+      obb(cx, cz, phi, 0, -hd, hw, 0.3, 0, 1.5); obb(cx, cz, phi, -hw, 0, 0.3, hd, 0, 1.5); obb(cx, cz, phi, hw, 0, 0.3, hd, 0, 1.5);
+      [[-hw + 0.3, -hd + 0.3], [hw - 0.3, -hd + 0.3]].forEach(([x, z]) => box(0.35, 4.2, 0.35, lam(0x6D4C41), x, 2.1, z, g));
+      const aw = new T.Mesh(new T.PlaneGeometry(hw * 2, 4.5), new T.MeshLambertMaterial({ color: 0xE57373, side: T.DoubleSide })); aw.rotation.x = -Math.PI / 2 + 0.25; aw.position.set(0, 4.0, -hd + 2.0); g.add(aw);
+    } else {
+      box(hw * 2, H, 0.4, wl, 0, H / 2 + 0.3, -hd, g); box(0.4, H, hd * 2, wl, -hw, H / 2 + 0.3, 0, g); box(0.4, H, hd * 2, wl, hw, H / 2 + 0.3, 0, g);
+      box(hw * 2 + 1, 0.5, hd * 2 + 1, lam(sy.roof), 0, H + 0.55, 0, g);
+      box(hw * 2 + 1.2, 0.25, 0.3, tr, 0, H + 0.1, hd + 0.2, g); box(0.6, H, 0.6, tr, -hw, H / 2 + 0.3, hd, g); box(0.6, H, 0.6, tr, hw, H / 2 + 0.3, hd, g);
+      obb(cx, cz, phi, 0, -hd, hw + 0.2, 0.35, 0, H + 0.4); obb(cx, cz, phi, -hw, 0, 0.35, hd + 0.2, 0, H + 0.4); obb(cx, cz, phi, hw, 0, 0.35, hd + 0.2, 0, H + 0.4);
+      obb(cx, cz, phi, 0, 0, hw + 0.5, hd + 0.5, H + 0.3, H + 0.9); // 지붕 (카메라용)
+      // 등급별 장식
+      if (t === 1) { [-4, 0, 4].forEach(x => { const l = new T.Mesh(new T.SphereGeometry(0.35, 10, 8), new T.MeshBasicMaterial({ color: 0xFFC27A })); l.position.set(x, H - 0.6, 0); g.add(l); box(0.05, 0.8, 0.05, lam(0x333333), x, H - 0.1, 0, g); }); box(hw * 2 - 0.4, 0.3, 0.1, tr, 0, 1.4, -hd + 0.25, g); }
+      if (t === 2) { [-hw + 0.25, hw - 0.25].forEach(x => { const gl = new T.Mesh(new T.PlaneGeometry(hd * 2 - 1, 1.6), new T.MeshLambertMaterial({ color: 0x9FE3FF, transparent: true, opacity: 0.5, side: T.DoubleSide })); gl.rotation.y = Math.PI / 2; gl.position.set(x * 1.03, H - 1.3, 0); g.add(gl); }); const mir = new T.Mesh(new T.PlaneGeometry(hw * 2 - 2, 3), new T.MeshLambertMaterial({ color: 0xF5FAFF, emissive: 0x334455 })); mir.position.set(0, 2.4, -hd + 0.22); g.add(mir); }
+      if (t === 3) { [-hw + 2, hw - 2].forEach(x => { box(0.8, H, 0.8, tr, x, H / 2 + 0.3, hd + 0.6, g); }); const cp = new T.Mesh(new T.PlaneGeometry(2.4, hd * 2 - 1), lam(0xB71C1C)); cp.rotation.x = -Math.PI / 2; cp.position.set(0, 0.33, 0.3); g.add(cp); const cr = new T.Mesh(new T.CylinderGeometry(1.1, 1.1, 0.8, 10), tr); cr.position.set(0, H + 1.4, 0); g.add(cr); for (let i = 0; i < 5; i++) { const a = i / 5 * Math.PI * 2, sp = new T.Mesh(new T.ConeGeometry(0.28, 0.8, 4), tr); sp.position.set(Math.cos(a) * 0.9, H + 2.1, Math.sin(a) * 0.9); g.add(sp); } }
+      if (t === 4) { [0.5, H - 0.2].forEach(y => { box(hw * 2 - 0.5, 0.12, 0.08, tr, 0, y + 0.3, -hd + 0.25, g); box(0.08, 0.12, hd * 2 - 0.5, tr, -hw + 0.25, y + 0.3, 0, g); box(0.08, 0.12, hd * 2 - 0.5, tr, hw - 0.25, y + 0.3, 0, g); }); const em = new T.Mesh(new T.OctahedronGeometry(1.3, 0), new T.MeshLambertMaterial({ color: 0x2BD889, emissive: 0x0E8A50 })); em.position.set(0, H + 2.4, 0); em.scale.y = 1.5; g.add(em); gymFx.push({ k: 'spin', o: em }); }
+      if (t === 5) { const dm = new T.Mesh(new T.OctahedronGeometry(1.8, 0), new T.MeshLambertMaterial({ color: 0xB3F5FF, emissive: 0x2A8CA8, transparent: true, opacity: 0.9 })); dm.position.set(0, H + 3, 0); dm.scale.y = 1.3; g.add(dm); gymFx.push({ k: 'spin', o: dm }); [[-hw, hd], [hw, hd], [-hw, -hd], [hw, -hd]].forEach(([x, z]) => { const cr = new T.Mesh(new T.OctahedronGeometry(0.6, 0), new T.MeshBasicMaterial({ color: 0x6FE7FF })); cr.position.set(x, H + 1.4, z); g.add(cr); gymFx.push({ k: 'spin', o: cr }); }); box(hw * 2 - 0.5, 0.12, 0.08, tr, 0, H, -hd + 0.25, g); gymFx.push({ k: 'spark', x: cx, z: cz, col: [0x6FE7FF, 0xFFFFFF] }); }
+      if (t === 6) { for (let i = 0; i < 3; i++) { const rg = new T.Mesh(new T.TorusGeometry(2.2 + i * 0.9, 0.14, 8, 40), new T.MeshLambertMaterial({ color: 0xFFD54F, emissive: 0x8A5A00 })); rg.position.set(0, H + 3.2 + i * 0.4, 0); rg.rotation.x = Math.PI / 2; g.add(rg); gymFx.push({ k: 'ring', o: rg, i }); } const bm = new T.Mesh(new T.CylinderGeometry(1.0, 1.0, 50, 14, 1, true), new T.MeshBasicMaterial({ color: 0xC77DFF, transparent: true, opacity: 0.22, blending: T.AdditiveBlending, depthWrite: false, side: T.DoubleSide })); bm.position.set(0, H + 26, 0); g.add(bm); gymFx.push({ k: 'beam', o: bm }); box(hw * 2 - 0.5, 0.14, 0.1, tr, 0, H, -hd + 0.25, g); box(hw * 2 - 0.5, 0.14, 0.1, tr, 0, 0.6, -hd + 0.25, g); gymFx.push({ k: 'spark', x: cx, z: cz, col: [0xC77DFF, 0xFFD54F] }); }
+    }
+    // 입구 간판 (등급·배율)
+    const fx = (lx, lz) => [cx + lx * Math.cos(phi) + lz * Math.sin(phi), cz - lx * Math.sin(phi) + lz * Math.cos(phi)];
+    const [sx, sz] = fx(0, hd + (t === 0 ? 1.2 : 0.35));
+    sign(G.en, `${G.ko} · 훈련 효과 ×${G.mult}`, sx, sz, phi, t === 0 ? { w: 8, h: 2.2, y: 3.6, bg: '#4E342E', acc: '#FFD54F' } : { w: 11, h: 2.0, y: 7.6, posts: false, bg: '#1A1036', acc: G.col });
+    // 잠긴 문 (이용권이 없으면 막힘)
+    let gate = null;
+    if (t > 0) {
+      const gt = canvasTex(512, 160, (c, w, h) => { c.fillStyle = 'rgba(255,60,80,.35)'; c.fillRect(0, 0, w, h); c.strokeStyle = 'rgba(255,255,255,.55)'; c.lineWidth = 10; for (let i = -4; i < 14; i++) { c.beginPath(); c.moveTo(i * 48, h); c.lineTo(i * 48 + 70, 0); c.stroke(); } c.fillStyle = '#fff'; c.font = '700 54px Jua, sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('이용권 필요', w / 2, h / 2); });
+      gate = new T.Mesh(new T.PlaneGeometry(hw * 2 - 0.6, H - 0.4), new T.MeshBasicMaterial({ map: gt, transparent: true, side: T.DoubleSide, depthWrite: false })); gate.position.set(0, H / 2 + 0.3, hd + 0.05); g.add(gate);
+      obb(cx, cz, phi, 0, hd, hw, 0.35, 0, H, t);
+    }
+    // 입구 안내판 (가격 · 배율 · 내 코인 · 구매 가능 여부)
+    const ib = canvasBoard(560, 420), ig = new T.Group(); box(4.2, 3.2, 0.2, lam(0x14122A), 0, 2.6, 0, ig); box(0.2, 1.1, 0.2, lam(0x37415F), 0, 0.55, 0, ig);
+    const fp = new T.Mesh(new T.PlaneGeometry(4.0, 3.0), new T.MeshBasicMaterial({ map: ib.t })); fp.position.set(0, 2.6, 0.11); ig.add(fp);
+    const [bx2, bz2] = fx(-hw + 1.6, hd + 3.0); ig.position.set(bx2, 0, bz2); ig.rotation.y = phi; scene.add(ig); COLL.push([bx2, bz2, 0.4]);
+    // 기구: 트레드밀 · 벤치프레스만
+    const rows = t === 0 ? [-2.6, 1.6] : [-1.2];
+    rows.forEach((lz, r) => { [-5.8, -3.0].forEach((lx, k) => { const [x, z] = fx(lx, lz); addMachine('spd', t * 10 + r * 2 + k, x, z, sy.mach, phi, 0.31); MACHINES[MACHINES.length - 1].tier = t; }); [3.0, 5.8].forEach((lx, k) => { const [x, z] = fx(lx, lz); addMachine('str', t * 10 + r * 2 + k, x, z, sy.mach, phi, 0.31); MACHINES[MACHINES.length - 1].tier = t; }); });
+    const [ex, ez] = fx(0, hd + 2.2);
+    gyms.push({ t, x: cx, z: cz, phi, gate, ib, sig: '', door: [ex, ez] });
+  }
+  function setGymOwned(k) { gymOwned = k | 0; gyms.forEach(G => { if (G.gate) G.gate.visible = G.t > gymOwned; }); }
+  /* 입구 안내판 내용 (내 화면 기준): o = { coins, owned } */
+  function setGymBoards(o) {
+    gyms.forEach(G => {
+      const d = GROW.GYMS[G.t], owned = G.t <= o.owned, next = G.t === o.owned + 1, can = next && o.coins >= d.price;
+      const s = [owned, next, can, o.coins, d.price].join('|'); if (s === G.sig) return; G.sig = s; const g = G.ib.g, W2 = 560, H2 = 420;
+      g.fillStyle = '#14122A'; g.fillRect(0, 0, W2, H2); g.fillStyle = d.col; g.fillRect(0, 0, W2, 84);
+      g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = '#14122A'; g.font = `900 44px ${FONT}`; g.fillText(d.en, W2 / 2, 36); g.font = '700 22px Jua, sans-serif'; g.fillText(`${G.t + 1}단계 · ${d.ko}`, W2 / 2, 70);
+      g.textAlign = 'left'; g.fillStyle = '#FFFFFF'; g.font = '700 30px Jua, sans-serif';
+      g.fillText(`이용권  ${d.price ? d.price + ' 코인' : '무료'}`, 28, 124);
+      g.fillStyle = '#4FC3F7'; g.fillText(`SPEED 훈련 ×${d.mult}`, 28, 172); g.fillStyle = '#FF7A8A'; g.fillText(`STRENGTH 훈련 ×${d.mult}`, 280, 172);
+      g.fillStyle = '#FFE08A'; g.fillText(`내 코인  ${o.coins}`, 28, 220);
+      let st, col; if (owned) { st = '이용 가능 · 안으로 들어가요!'; col = '#7DFFB5'; } else if (can) { st = 'E를 눌러 이용권 구매!'; col = '#7DFFB5'; } else if (next) { st = `코인 ${d.price - o.coins}개 더 필요해요`; col = '#FFB74D'; } else { st = `먼저 ${GROW.GYMS[G.t - 1].en} 이용권이 필요해요`; col = '#B0A8D8'; }
+      g.fillStyle = col + '33'; rrect(g, 20, 256, W2 - 40, 70, 18); g.fill(); g.fillStyle = col; g.textAlign = 'center'; g.font = '700 30px Jua, sans-serif'; g.fillText(st, W2 / 2, 292);
+      g.font = '600 20px Jua, sans-serif'; g.fillStyle = 'rgba(255,255,255,.6)'; g.fillText('이용권은 한 번 사면 계속 쓸 수 있어요 · 순서대로 구매', W2 / 2, 360);
+      G.ib.t.needsUpdate = true;
+    });
+  }
+  function nearGymDoor(maxD) { let best = null, bd = maxD || 4.2; gyms.forEach(G => { const d = Math.hypot(me.x - G.door[0], me.z - G.door[1]); if (d < bd) { bd = d; best = G.t; } }); return best; }
+  function stepGyms(dt, t) {
+    gymFx.forEach(f => { if (f.k === 'spin') f.o.rotation.y += dt * 0.9; else if (f.k === 'ring') { f.o.rotation.z += dt * (0.5 + f.i * 0.3) * (f.i % 2 ? -1 : 1); f.o.position.y += Math.sin(t * 1.5 + f.i) * 0.004; } else if (f.k === 'beam') f.o.material.opacity = 0.16 + Math.sin(t * 2) * 0.07; else if (f.k === 'spark' && Math.random() < dt * 5) burst(f.x + rand(-7, 7), rand(1, 7), f.z + rand(-6, 6), 2, f.col, 1.2, { life: 0.9 }); });
+    gyms.forEach(G => { if (G.gate && G.gate.visible) G.gate.material.opacity = 0.75 + Math.sin(t * 3) * 0.2; });
+  }
+
+  /* ---------------- 작업장 (WORK YARD) ---------------- */
+  const yard = { items: {}, bins: [], binSig: '', marker: null };
+  function buildWorkYard() {
+    const [wx, wz] = POS.work, x0 = wx - 14, x1 = wx + 14, z0 = wz - 10, z1 = wz + 10;
+    const gt = canvasTex(256, 256, (c, w, h) => { c.fillStyle = '#B79A72'; c.fillRect(0, 0, w, h); for (let i = 0; i < 260; i++) { c.fillStyle = ['#A88B64', '#C4A880', '#9E8260'][i % 3]; c.fillRect(hashN(i) * w, hashN(i + 9) * h, 4 + hashN(i + 3) * 6, 3 + hashN(i + 5) * 5); } });
+    gt.wrapS = gt.wrapT = T.RepeatWrapping; gt.repeat.set(4, 3);
+    const fl = new T.Mesh(new T.PlaneGeometry(28, 20), new T.MeshLambertMaterial({ map: gt })); fl.rotation.x = -Math.PI / 2; fl.position.set(wx, 0.045, wz); fl.receiveShadow = true; scene.add(fl);
+    // 울타리 (남쪽·동쪽 가운데는 입구)
+    const fence = (ax, az, bx, bz) => { const L = Math.hypot(bx - ax, bz - az), n = Math.max(1, Math.round(L / 2)); for (let i = 0; i <= n; i++) box(0.22, 1.3, 0.22, lam(0x5D4037), ax + (bx - ax) * i / n, 0.65, az + (bz - az) * i / n); const r = box(Math.abs(bx - ax) + 0.15, 0.14, Math.abs(bz - az) + 0.15, lam(0xFFB300), (ax + bx) / 2, 1.1, (az + bz) / 2); r.castShadow = false; OBBS.push({ x: (ax + bx) / 2, z: (az + bz) / 2, c: 1, s: 0, hw: Math.abs(bx - ax) / 2 + 0.1, hd: Math.abs(bz - az) / 2 + 0.1, y0: 0, y1: 1.4 }); };
+    fence(x0, z0, wx - 4, z0); fence(wx + 4, z0, x1, z0); fence(x0, z1, x1, z1); fence(x0, z0, x0, z1); fence(x1, z0, x1, wz - 4); fence(x1, wz + 4, x1, z1);
+    sign('WORK YARD', '작업장 · 일하고 코인을 벌어요', wx, z0, Math.PI, { w: 10, h: 2.4, y: 4.2, bg: '#0D47A1', acc: '#FFB300' });
+    sign('WORK YARD', '작업장 입구', x1, wz, Math.PI / 2, { w: 6, h: 1.7, y: 3.4, bg: '#0D47A1', acc: '#FFB300' });
+    sign('작업 3가지', 'A 상자 운반 · B 자재 분류 · C 배송', wx - 3, z0 + 1.4, Math.PI, { w: 7.5, h: 2.2, y: 2.6, bg: '#263238', acc: '#FFB300' });
+    // A: 상자 더미 → 트럭
+    const [ax, az] = POS.jobA, [dx, dz] = POS.jobAd;
+    box(3.4, 0.25, 3.4, lam(0x8B5A2B), ax, 0.13, az); for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) for (let k = 0; k < (i + j) % 2 + 1; k++) { const c = box(0.95, 0.95, 0.95, lam(k ? 0xA1673A : 0xB97A45), ax + (i - 1) * 1.05, 0.73 + k * 0.97, az + (j - 1) * 1.05); c.rotation.y = hashN(i * 9 + j + k) * 0.3; }
+    COLL.push([ax, az, 1.8]); sign('A 상자 가져가기', '상자를 들고 트럭까지!', ax, az - 2.6, Math.PI, { w: 4.6, h: 1.3, y: 2.7, bg: '#6D4C41', acc: '#FFE08A' });
+    const tk = new T.Group(); box(3.2, 2.4, 2.6, lam(0x1976D2), 0, 1.6, 2.4, tk); box(2.4, 1.1, 2.4, lam(0x90CAF9), 0, 2.2, 3.4, tk); box(3.4, 0.35, 4.6, lam(0x455A64), 0, 0.9, -1.3, tk); box(0.2, 0.8, 4.6, lam(0x607D8B), -1.6, 1.45, -1.3, tk); box(0.2, 0.8, 4.6, lam(0x607D8B), 1.6, 1.45, -1.3, tk);
+    [[-1.5, 2.4], [1.5, 2.4], [-1.5, -2.4], [1.5, -2.4]].forEach(([a, b]) => { const w = cyl(0.55, 0.55, 0.4, 14, lam(0x212121), a, 0.55, b, tk); w.rotation.z = Math.PI / 2; });
+    tk.position.set(dx, 0, dz + 5.4); scene.add(tk); COLL.push([dx, dz + 4.4, 1.9], [dx, dz + 7.0, 1.9]); yard.truck = tk; yard.load = [];
+    const pad = new T.Mesh(new T.PlaneGeometry(3.4, 3), basic(0xFFD600, { transparent: true, opacity: 0.55 })); pad.rotation.x = -Math.PI / 2; pad.position.set(dx, 0.06, dz); scene.add(pad); yard.pad = pad;
+    sign('A 트럭에 싣기', '노란 칸에서 E', dx + 3.2, dz, -Math.PI / 2, { w: 4, h: 1.2, y: 2.4, bg: '#1565C0', acc: '#FFE08A' });
+    // B: 분류 통 3개
+    POS.bins.forEach(([bx3, bz3], i) => { const b = new T.Group(), col = [0xE53935, 0x1E88E5, 0xFDD835][i]; box(2, 0.12, 2, lam(0x37474F), 0, 0.06, 0, b); box(2, 1.1, 0.15, lam(col), 0, 0.6, 0.95, b); box(2, 1.1, 0.15, lam(col), 0, 0.6, -0.95, b); box(0.15, 1.1, 2, lam(col), 0.95, 0.6, 0, b); box(0.15, 1.1, 2, lam(col), -0.95, 0.6, 0, b);
+      const lb = canvasBoard(256, 128), sp = new T.Sprite(new T.SpriteMaterial({ map: lb.t, depthWrite: false })); sp.scale.set(2.4, 1.2, 1); sp.position.y = 2.3; b.add(sp); b.position.set(bx3, 0, bz3); scene.add(b); COLL.push([bx3, bz3, 1.1]); yard.bins.push({ b, lb, x: bx3, z: bz3, col }); });
+    sign('B 자재 분류', '흩어진 자재를 알맞은 통에!', POS.bins[0][0] - 2.8, POS.bins[0][1], Math.PI / 2, { w: 4.2, h: 1.3, y: 2.6, bg: '#2E7D32', acc: '#FFE08A' });
+    // C: 배송 창구
+    const [cx2, cz2] = POS.jobC; box(3.6, 1.1, 1.2, lam(0x5D4037), cx2, 0.55, cz2); box(3.8, 0.12, 1.4, lam(0x8D6E63), cx2, 1.16, cz2); box(3.6, 2.6, 0.3, lam(0x4E342E), cx2, 1.3, cz2 + 1.6);
+    for (let i = 0; i < 6; i++) { const p = box(0.7, 0.5, 0.6, lam(0xC8A26B), cx2 - 1.3 + (i % 3) * 1.3, 1.5 + Math.floor(i / 3) * 0.9, cz2 + 1.25); p.rotation.y = hashN(i) * 0.3; }
+    COLL.push([cx2 - 1.2, cz2, 0.9], [cx2 + 1.2, cz2, 0.9]); sign('C 배송 창구', '소포를 받아 목적지까지!', cx2, cz2 - 1.4, Math.PI, { w: 4.4, h: 1.3, y: 2.9, bg: '#AD1457', acc: '#FFE08A', posts: false });
+    // 목적지 표식 (C)
+    const mk = new T.Group(), ring = new T.Mesh(new T.RingGeometry(2.2, 2.8, 40), basic(0xFF4FA0, { transparent: true, opacity: 0.85, side: T.DoubleSide })); ring.rotation.x = -Math.PI / 2; ring.position.y = 0.1; mk.add(ring);
+    const beam = new T.Mesh(new T.CylinderGeometry(1.2, 1.2, 40, 14, 1, true), new T.MeshBasicMaterial({ color: 0xFF4FA0, transparent: true, opacity: 0.22, blending: T.AdditiveBlending, depthWrite: false, side: T.DoubleSide })); beam.position.y = 20; mk.add(beam);
+    mk.visible = false; scene.add(mk); yard.mk = mk; yard.mkRing = ring;
+  }
+  function itemMesh(it) {
+    const g = new T.Group(), c = new T.Mesh(new T.BoxGeometry(0.8, 0.8, 0.8), lam(it.col)); c.position.y = 0.45; if (SH()) c.castShadow = true; g.add(c); box(0.82, 0.12, 0.82, lam(0x3E2723), 0, 0.62, 0, g);
+    if (it.label) { const lb = canvasBoard(256, 96), gg = lb.g; gg.fillStyle = 'rgba(20,18,42,.85)'; rrect(gg, 4, 4, 248, 88, 20); gg.fill(); gg.fillStyle = '#fff'; gg.font = '700 52px Jua, sans-serif'; gg.textAlign = 'center'; gg.textBaseline = 'middle'; gg.fillText(it.label, 128, 50); lb.t.needsUpdate = true; const sp = new T.Sprite(new T.SpriteMaterial({ map: lb.t, depthWrite: false })); sp.scale.set(1.9, 0.72, 1); sp.position.y = 1.5; g.add(sp); }
+    g.position.set(it.x, 0, it.z); g.rotation.y = hashN(it.x * 7 + it.z) * 3; return g;
+  }
+  /* B 자재: 내 화면에만 놓이는 물건들 */
+  function setYardItems(list) {
+    const keep = {}; (list || []).forEach(it => { keep[it.id] = 1; if (!yard.items[it.id]) { const m = itemMesh(it); scene.add(m); yard.items[it.id] = { m, it }; } });
+    Object.keys(yard.items).forEach(id => { if (!keep[id]) { scene.remove(yard.items[id].m); delete yard.items[id]; } });
+  }
+  function nearYardItem(maxD) { let best = null, bd = maxD || 2.4; Object.values(yard.items).forEach(o => { const d = Math.hypot(me.x - o.it.x, me.z - o.it.z); if (d < bd) { bd = d; best = o.it; } }); return best; }
+  function setBins(labels) {
+    const s = JSON.stringify(labels); if (s === yard.binSig) return; yard.binSig = s;
+    yard.bins.forEach((B, i) => { const g = B.lb.g; g.clearRect(0, 0, 256, 128); g.fillStyle = '#' + new T.Color(B.col).getHexString(); rrect(g, 6, 6, 244, 116, 26); g.fill(); g.lineWidth = 8; g.strokeStyle = '#fff'; rrect(g, 6, 6, 244, 116, 26); g.stroke(); g.fillStyle = i === 2 ? '#3A2A00' : '#fff'; g.font = '900 64px Jua, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(labels[i] || '', 128, 68); B.lb.t.needsUpdate = true; });
+  }
+  function nearBin(maxD) { let best = -1, bd = maxD || 2.6; yard.bins.forEach((B, i) => { const d = Math.hypot(me.x - B.x, me.z - B.z); if (d < bd) { bd = d; best = i; } }); return best; }
+  function setMarker(p) { if (!yard.mk) return; yard.mk.visible = !!p; if (p) yard.mk.position.set(p.x, 0, p.z); }
+  function truckLoad() { if (!yard.truck) return; const n = yard.load.length; if (n >= 12) { yard.load.forEach(m => yard.truck.remove(m)); yard.load = []; } const m = box(0.9, 0.9, 0.9, lam(0xB97A45), -1 + (yard.load.length % 3) * 1.0, 1.55 + Math.floor(yard.load.length / 6) * 0.95, -2.6 + Math.floor(yard.load.length / 3) % 2 * 1.4, yard.truck); yard.load.push(m); }
+  function stepYard(dt, t) { if (yard.mk && yard.mk.visible) { yard.mkRing.scale.setScalar(1 + Math.sin(t * 4) * 0.08); yard.mk.children[1].material.opacity = 0.16 + Math.sin(t * 3) * 0.06; } if (yard.pad) yard.pad.material.opacity = 0.4 + Math.sin(t * 4) * 0.15; Object.values(yard.items).forEach((o, i) => { o.m.children[0].position.y = 0.45 + Math.abs(Math.sin(t * 2 + i)) * 0.08; }); }
+  /* 손에 든 작업 물건 (다른 친구에게도 보임): j = 0 없음 · 1 상자 · 2~4 자재(빨강/파랑/노랑) · 9 소포 */
+  const HELD_COL = { 1: 0xB97A45, 2: 0xE53935, 3: 0x1E88E5, 4: 0xFDD835, 9: 0xC8A26B };
+  function syncHeld(av) {
+    const j = av.j | 0; if (av.heldJ === j) return; av.heldJ = j; if (av.held) { av.a.body.remove(av.held); av.held = null; } if (!j) return;
+    const g = new T.Group(), s = j === 1 ? 0.85 : j === 9 ? 0.75 : 0.65, c = new T.Mesh(new T.BoxGeometry(s, j === 9 ? 0.5 : s, s), lam(HELD_COL[j] || 0xB97A45)); g.add(c);
+    if (j === 9) { const tp = new T.Mesh(new T.BoxGeometry(s + 0.02, 0.52, 0.12), lam(0x8D6E63)); g.add(tp); } if (j === 1) { const b2 = new T.Mesh(new T.BoxGeometry(s + 0.02, 0.1, s + 0.02), lam(0x6D4C41)); g.add(b2); }
+    g.position.set(0, Avatar.U * 3.2, Avatar.U * 1.4); av.a.body.add(g); av.held = g;
   }
   const api = {
     POS, QUARRY_R, LOBBY_R, MACHINES, me, cam, st, avatars, sfx, fps: 60, evs,
     init, resize, setPyramid, syncBuild, setHighlight, setRubble, heightAt, distToBuild, avatar, setLook, removeAvatar, updateRemote, levelFx, popText, sourceOf, burst, firework, quake, celebrate, finale, stopFinale, get finaleOn() { return fin.on; }, get finDbg() { return { stage: fin.stage, t: fin.t, climbT: fin.climbT, top: fin.top, u: (fin.top || []).map(p => avatars[p] && avatars[p].climb ? [avatars[p].fin, !!avatars[p].climb] : 'none') }; }, gatherAll, setEvents,
     setJoy, doAct, setMachine, nearestMachine, setLobby, specView, project, toggleLock,
+    setRanks, nearBoard, viewBoard, get boardView() { return rk.view; }, get boardCount() { return rk.count; }, takeBlocks, setGymOwned, setGymBoards, nearGymDoor, gyms, setYardItems, nearYardItem, setBins, nearBin, setMarker, truckLoad, piles,
     onAction: f => { on.action = f; }, onFinale: f => { on.finale = f; }, onFrame: f => { on.frame = f; }, onLock: f => { on.lock = f; },
     setMode: m => { if (m === mode) return; mode = m; if (m === 'player') { cam.dist = 13; cam.pitch = 0.32; cam.cine = null; } else specView(); },
     get mode() { return mode; }, get quality() { return quality; }, get running() { return running; }, get canvas() { return canvas; },
@@ -3393,7 +3811,7 @@ var W = (function () {
       body = `<div class="modecards">
         <button class="mcard math ${isMath && !isSoc ? 'on' : ''}" data-act="setmode" data-v="math">${ART_MATH}<span class="tick">${IC('check')}</span><div class="txt"><b>MATH</b><span class="ko">MODE 1 · 수학</span><p>수학 문제를 풀어 캐릭터를 성장시키는 교육용 모드. 개인별 비밀 난이도 · 힌트 · 재도전 · 긴급 학급 점검 이벤트가 켜져요.<br>기본: 5학년 2학기 4단원 소수의 곱셈</p></div></button>
         <button class="mcard soc ${isSoc ? 'on' : ''}" data-act="setmode" data-v="soc">${ART_SOC}<span class="tick">${IC('check')}</span><div class="txt"><b>SOCIAL</b><span class="ko">MODE 2 · 사회</span><p>역사 퀴즈(선택형 · OX · 시대 순서)를 풀어 성장하는 사회 수업 모드. 비밀 난이도 · 5단계 힌트 · 긴급 학급 점검까지 모두 켜져요.<br>5학년 2학기 1·2단원 (선사 시대 ~ 개항) 199문제</p></div></button>
-        <button class="mcard free ${!isMath ? 'on' : ''}" data-act="setmode" data-v="free">${ART_FREE}<span class="tick">${IC('check')}</span><div class="txt"><b>FREE PLAY</b><span class="ko">MODE 3 · 없음</span><p>학습 기능 없이 순수하게 피라미드를 짓는 시뮬레이터. 블록을 쌓아 코인을 벌고, 헬스장 운동과 업그레이드로 능력치를 키워요.</p></div></button>
+        <button class="mcard free ${!isMath ? 'on' : ''}" data-act="setmode" data-v="free">${ART_FREE}<span class="tick">${IC('check')}</span><div class="txt"><b>FREE PLAY</b><span class="ko">MODE 3 · 없음</span><p>학습 기능 없이 순수하게 피라미드를 짓는 시뮬레이터. 작업장에서 코인을 벌어 더 좋은 헬스장 이용권을 사고, 운동으로 SPEED·STRENGTH를 키워요.</p></div></button>
       </div><div class="row" style="justify-content:flex-end;margin-top:18px"><button class="btn xl green" data-act="setnext">다음 ▶</button></div>`;
     } else {
       const auto = Math.round(GROW.autoTarget(st.n, st.minutes) * (isMath ? 1 : 1.7)), want = st.target > 0 ? st.target : auto, N = GM.sizeFor(want), tot = GM.totalOf(N);
@@ -3428,8 +3846,7 @@ var W = (function () {
           <div class="panel"><div class="ptitle">${IC('coin')} 순수 게임 설정</div>
             <p class="dim" style="margin-top:0">문제 풀이 · 긴급 학급 점검 · 정답률 집계 · 학습 통계가 모두 꺼져요.</p>
             <div class="field"><label>블록 1개 배치 보상</label>${stepper('coinBlock', 1, 10, '코인', 'g')}</div>
-            <div class="field"><label>업그레이드 첫 가격</label>${stepper('upBase', 10, 100, '코인', 'g', 5)}</div>
-            <div class="field"><label>헬스장 운동 1회 경험치</label>${stepper('repXp', 1, 5, 'XP', 'g')}</div></div>
+            <div class="field"><label>운동 1세트 경험치 (× 헬스장 배율)</label>${stepper('setXp', 1, 10, 'XP', 'g')}</div></div>
           ${ev}</div>`;
       }
       body += `<div class="row" style="justify-content:space-between;margin-top:18px"><button class="btn ghost" data-act="setback">◀ 모드 다시 고르기</button><button class="btn xl green" data-act="create">${IC('hammer')} 게임방 만들기</button></div>`;
@@ -3548,8 +3965,7 @@ var W = (function () {
     const tg = (k, label) => { const v = st[k] !== false; return `<div class="cf"><label>${label}</label><div class="seg sm"><button class="${v ? 'on' : ''}" data-act="tset" data-k="${k}" data-v="1">켬</button><button class="${!v ? 'on' : ''}" data-act="tset" data-k="${k}" data-v="0">끔</button></div></div>`; };
     return `<div class="panel"><div class="ptitle">${IC('gear')} 게임 설정 <small class="dim" style="font-family:var(--font);font-size:14px">학습 모드(${MODE_LBL[modeOf(m)]})는 방을 만들 때 확정돼요 · 아래 수치는 바로 적용</small></div>
       <div class="cfgg">${free ? tg('randEv', '랜덤 이벤트') : tg('secret', '개인별 비밀 난이도') + tg('hints', '힌트 제공') + tg('randEv', '랜덤 이벤트') + tg('collapse', '피라미드 붕괴 이벤트')}${tg('rank', '기여도 랭킹 표시')}${(st.roster || []).length ? tg('rosterOnly', '명단에 있는 학생만 입장') : ''}</div>
-      <h3>성장</h3><div class="cfgg">${num('xp0', '첫 레벨업 필요 경험치', 3, 60)}${num('xpInc', '레벨마다 추가 경험치', 0, 40)}${num('maxLv', '최대 레벨', 3, 12)}${free ? num('coinBlock', '블록 1개 코인', 1, 10) + num('upBase', '업그레이드 첫 가격', 5, 200) + num('upMul', '가격 증가 배율', 1, 3, 0.05) + num('repXp', '운동 1회 경험치', 1, 10) : num('xpBase', '정답 기본 경험치', 1, 40) + num('xpFirst', '첫 시도 보너스', 0, 20) + num('xpApp', '응용 문제 보너스', 0, 20) + num('xpAcc', '최근 80%↑ 보너스', 0, 20) + num('xpFail', '끝까지 도전 경험치', 0, 20)}</div>
-      <h3>레벨별 능력치 표 (Lv.1부터, 쉼표로 구분)</h3><div class="col">${GROW.STAT_IDS.map(k => `<div class="row"><b style="width:150px;color:${STAT_COL[k]}">${ST[k].name} (${ST[k].unit})</b><input class="tblin grow" type="text" value="${g.tables[k].join(', ')}" data-tbl="${k}"></div>`).join('')}</div>
+      <h3>성장</h3><div class="cfgg">${num('xp0', '첫 레벨업 필요 경험치', 3, 60)}${num('xpInc', '레벨마다 추가 경험치', 0, 40)}${num('spdStep', 'SPEED Lv당 속도 증가', 0.02, 0.5, 0.01)}${num('carry0', 'STRENGTH Lv당 운반량', 1, 20)}${num('coinBlock', '블록 1개 코인', 0, 10)}${num('priceMul', '헬스장 이용권 가격 배율', 0.1, 5, 0.1)}${num('xp0', 'Lv.2까지 필요 경험치', 5, 200)}${num('xpInc', '레벨마다 늘어나는 경험치', 0, 100)}${num('payA', '작업 A 보상', 1, 50)}${num('payB', '작업 B 보상', 1, 50)}${num('payC0', '작업 C 기본 보상', 1, 50)}${free ? num('setXp', '운동 1세트 경험치', 1, 20) + num('setTaps', '1세트 E 횟수', 4, 20) : num('xpBase', '정답 기본 경험치', 1, 40) + num('xpFirst', '첫 시도 보너스', 0, 20) + num('xpApp', '응용 문제 보너스', 0, 20) + num('xpAcc', '최근 80%↑ 보너스', 0, 20) + num('xpFail', '끝까지 도전 경험치', 0, 20)}</div>
       ${free ? '' : `<h3>긴급 안전 점검</h3><div class="cfgg">${num('emN', '문제 수', 3, 20)}${num('emDur', '제한 시간(초)', 45, 400, 5)}${num('emGap', '간격(분)', 2, 20)}${num('emFirst', '첫 점검(분)', 1, 30)}${num('emXp', '정답 1개당 경험치', 0, 20)}${num('thGreat', '대성공 기준(%)', 50, 100)}${num('thOk', '성공 기준(%)', 30, 100)}${num('thWarn', '주의 기준(%)', 0, 100)}${num('collapsePct', '붕괴 규모(%)', 1, 20)}${num('bonusPct', '대성공 보너스(0~0.2)', 0, 0.2, 0.01)}</div>`}
       <h3>랜덤 이벤트</h3><div class="cfgg">${num('evGap', '간격(분)', 1, 10, 0.1)}</div>
       ${m.status === 'lobby' ? `<h3>피라미드 크기 (시작 전에만)</h3><div class="row"><input type="number" min="0" max="12000" value="${st.target || 0}" id="ttarget" style="width:140px"><button class="btn sm" data-act="ttarget">적용</button><span class="dim">지금 ${m.total}블록 (${m.N}×${m.N}) · 0 = 자동</span></div>` : ''}
@@ -3689,7 +4105,7 @@ var W = (function () {
       <div class="topbar"><button class="menubtn" data-act="drawer" data-d="settings" title="설정">${IC('gear')}</button><span class="pill tm" id="hudtime">--:--</span><div class="pyrprog" id="pyrprog"></div><div class="netpill" id="netpill"></div></div>
       <div class="buffs" id="buffs"></div><div id="evbarw"></div>
       <div class="sidebtns"><button class="sbtn q" data-act="drawer" data-d="quest">${IC('flag')}퀘스트</button><button class="sbtn c" data-act="drawer" data-d="stats">${IC('user')}캐릭터</button><button class="sbtn t" data-act="drawer" data-d="train">${IC('muscle')}훈련</button><button class="sbtn h" data-act="drawer" data-d="help">${IC('help')}도움말</button></div>
-      <div class="mapbox"><canvas class="mmap" id="mmap" width="312" height="312"></canvas><div class="garrow" id="garrow"><i></i><span></span></div><div id="rankw"></div><div id="evcard"></div></div>
+      <div class="mapbox"><canvas class="mmap" id="mmap" width="312" height="312"></canvas><div class="garrow" id="garrow"><i></i><span></span></div><div id="evcard"></div></div>
       <div class="statbar" id="statbar"></div>
       <div id="pps"></div>
       <div class="joy" id="joy"><i></i></div>
@@ -3703,6 +4119,28 @@ var W = (function () {
     else { const a = Math.random() * Math.PI * 2, d = Math.random() * 6; W.me.x = W.POS.spawn[0] + Math.cos(a) * d; W.me.z = W.POS.spawn[1] + 2 + Math.sin(a) * d; W.me.rot = Math.PI; }
     W.cam.yaw = 0; W.cam.pitch = 0.3; W.cam.cd = null;
     bindTouch(); SND.bgm(m.status === 'lobby' ? 'lobby' : 'desert'); onRoom(); onPos();
+    JOB.held = 0; JOB.type = null; JOB.dest = null; W.setMarker(null); newYard();
+    if (!load('pyr_tut3')) { S.tut = 0; setTimeout(() => tutStep(0), 600); }
+  }
+  /* 첫 입장 튜토리얼 (월드를 둘러보는 순서) */
+  function tutSteps() {
+    const free = FREE(), lrn = SOC() ? '역사 퀴즈' : '수학 문제', P = W.POS;
+    return [
+      ['move', '움직이기', `<b>W A S D</b>(태블릿은 왼쪽 조이스틱)로 걸어요. Space는 점프! 화면을 끌면 둘러볼 수 있어요.`, null],
+      ['pick', '① 채석장 QUARRY', `서쪽 채석장의 <b>블록 더미 옆에서 E</b> → 블록이 머리 위로 쌓여요. 더미는 줄었다가 다시 채워져요.`, [P.quarry[0], P.quarry[1], 'QUARRY']],
+      ['pyramid', '② 피라미드 PYRAMID', `블록을 든 채 피라미드에 다가가 <b>E(또는 Q)</b> → 초록 칸에 쌓여요. 우리 반 모두의 피라미드예요!`, [0, 0, 'PYRAMID']],
+      ['coin', '③ 작업장 WORK YARD', `상자 운반 · 자재 분류 · 배송으로 <b>코인</b>을 벌어요. 직접 들고 옮겨야 돈을 받아요.`, [P.work[0], P.work[1], 'WORK YARD']],
+      ['muscle', '④ 헬스장 거리 GYM', `BASIC은 무료! 코인으로 BRONZE → … → LEGEND 이용권을 사면 훈련 효과가 커져요. ${free ? '트레드밀·벤치프레스에서 E를 한 번씩 눌러 세트를 채워요.' : '트레드밀·벤치프레스에서 ' + lrn + '를 맞히면 경험치!'} SPEED는 빨라지고 STRENGTH는 더 많이 들고 한 번에 더 많이 놓아요.`, [W.gyms[0].door[0], W.gyms[0].door[1], 'BASIC GYM']],
+      ['crown', '⑤ 랭킹 광장 LEADERBOARD', `피라미드 남쪽 광장의 큰 게시판에서 순위를 직접 봐요. 1~3위 캐릭터는 시상대에 올라가요!`, [P.rank[0], P.rank[1], 'LEADERBOARD']],
+      ['map', '길을 잃으면?', `오른쪽 위 지도의 <b>화살표</b>와 곳곳의 <b>방향 표지판</b>을 따라가요. 왼쪽 「퀘스트」에서 할 일을 다시 볼 수 있어요.`, null]
+    ];
+  }
+  function tutStep(d) {
+    const L = tutSteps(); S.tut = d === 99 ? L.length : d === 0 ? 0 : (S.tut || 0) + d; const old = $('#tut'); if (old) old.remove();
+    if (S.tut >= L.length) { save('pyr_tut3', 1); S.guide = null; return; }
+    const [ic, t, body, tgt] = L[S.tut]; S.guide = tgt ? { x: tgt[0], z: tgt[1], name: tgt[2] } : null;
+    const g3 = $('#g3'); if (!g3) return;
+    g3.insertAdjacentHTML('beforeend', `<div class="tut glass" id="tut"><div class="tuth">${IC(ic)} <b>${t}</b><span>${S.tut + 1} / ${L.length}</span></div><p>${body}</p>${tgt ? `<p class="dim">지도 화살표가 ${tgt[2]} 방향을 가리켜요</p>` : ''}<div class="row" style="justify-content:flex-end"><button class="btn sm ghost" data-act="tutskip">건너뛰기</button><button class="btn sm green" data-act="tutnext">${S.tut === L.length - 1 ? '시작!' : '다음'}</button></div></div>`);
   }
   function mergePriv(v) {
     const L = S.localQ; if (!L) return v;
@@ -3715,7 +4153,9 @@ var W = (function () {
   const inv = () => (S.priv && S.priv.inv) || {};
   const myLv = k => GROW.levelOf(((S.priv && S.priv.xp) || {})[k] || 0, G());
   const statV = k => GROW.val(k, myLv(k).lv, G());
-  const fmtStat = (k, l) => { const v = GROW.val(k, l, G()); return k === 'spd' ? `×${v.toFixed(1)}` : k === 'rng' ? `${v}m` : `${v}개`; };
+  const capV = () => GROW.carryCap(myLv('str').lv, G()), bulkV = () => GROW.placeN(myLv('str').lv);
+  const fmtStat = (k, l) => GROW.fmt(k, l, G());
+  const owned = () => inv().gym || 0, GYMS = GROW.GYMS;
   function onPriv() {
     if (S.role !== 'student' || !S.priv) return;
     const lv = {}; GROW.STAT_IDS.forEach(k => lv[k] = myLv(k).lv);
@@ -3776,7 +4216,7 @@ var W = (function () {
     const m = meta(), st = m.status, lb = $('#lobbyban');
     if (st === 'lobby') { if (!lb) $('#g3').insertAdjacentHTML('beforeend', `<div class="lobbyban glass" id="lobbyban"><span class="disp">WAITING PLAZA</span>${esc(S.me.nick)} 건설자, 대기 광장에 도착했어요!<br>선생님이 <b>게임 시작</b>을 누르면 사막 전체로 나갈 수 있어요<span class="waitdots"></span></div>`); }
     else if (lb) lb.remove();
-    if (st !== 'lobby' && !S.seen.started) { S.seen.started = 1; SND.bgm('desert'); if (NET.now() - (m.startAt || 0) < 8000) { sx.fanfare(); banner(`${IC('play', 'huge')}<div class="big">GAME START!</div><div class="sm">${FREE() ? '채석장에서 블록을 캐서 → 피라미드에 쌓고 → 코인으로 업그레이드!' : '헬스장에서 문제를 풀어 능력치를 키우고 → 채석장에서 블록을 캐서 → 피라미드에 쌓아요!'}</div>`, 3600, { confetti: true }); W.burst(W.me.x, W.me.y + 1, W.me.z, 80, [0x4FC3F7, 0xFFFFFF], 9); } }
+    if (st !== 'lobby' && !S.seen.started) { S.seen.started = 1; SND.bgm('desert'); if (NET.now() - (m.startAt || 0) < 8000) { sx.fanfare(); banner(`${IC('play', 'huge')}<div class="big">GAME START!</div><div class="sm">${FREE() ? '채석장에서 블록을 캐서 → 피라미드에 쌓고 → 작업장에서 번 코인으로 더 좋은 헬스장!' : '헬스장에서 문제를 풀어 SPEED·STRENGTH를 키우고 → 채석장 블록을 피라미드에 쌓아요! 작업장에서 코인을 벌면 더 좋은 헬스장!'}</div>`, 3600, { confetti: true }); W.burst(W.me.x, W.me.y + 1, W.me.z, 80, [0x4FC3F7, 0xFFFFFF], 9); } }
     const po = $('#pauseov'), paused = st === 'paused';
     if (paused && !po) { const d = document.createElement('div'); d.id = 'pauseov'; d.className = 'fx'; d.style.pointerEvents = 'auto'; d.style.background = 'rgba(0,0,0,.65)'; d.innerHTML = `<div class="fxban">${IC('pause', 'huge')}<div class="big">PAUSED</div><div class="sm">선생님 말씀을 들어요. 시간도 함께 멈춰 있어요.</div></div>`; document.body.appendChild(d); }
     else if (!paused && po) po.remove();
@@ -3831,43 +4271,132 @@ var W = (function () {
     if (S.sig.pp !== pp) { $('#pyrprog').innerHTML = pp; S.sig.pp = pp; }
     const bf = buffChips(m, true); if (S.sig.bf !== bf) { $('#buffs').innerHTML = bf; S.sig.bf = bf; }
     renderNet();
-    const iv = inv(), cap = statV('str'), carry = (iv.carry || 0) + (iv.gold || 0);
+    const iv = inv(), cap = capV(), carry = (iv.carry || 0) + (iv.gold || 0);
     const sb = `<div class="sbox carry">${IC('block')}<div><b>${carry}<span style="font-size:18px;opacity:.7">/${cap}</span></b><small>운반 중${iv.gold ? ` · 황금 ${iv.gold}` : ''}</small></div></div>
-      ${free ? `<div class="sbox coin">${IC('coin')}<div><b>${iv.coins || 0}</b><small>코인</small></div></div>` : `<div class="sbox mat">${IC('check')}<div><b>${((S.priv && S.priv.st) || {}).ok || 0}</b><small>맞힌 문제</small></div></div>`}
+      <div class="sbox coin" id="coinbox">${IC('coin')}<div><b>${iv.coins || 0}</b><small>코인 · ${GYMS[owned()].en.replace(' GYM', '')}</small></div></div>
       <div class="lvchips">${GROW.STAT_IDS.map(k => { const l = myLv(k); return `<div class="lvc" style="color:${STAT_COL[k]}" title="${ST[k].name}">${IC(ST[k].icon)}<b>${l.lv}</b><small>${ST[k].en.split(' ').pop()}</small><span class="xb"><i style="width:${l.need ? Math.round(l.cur / l.need * 100) : 100}%;background:${STAT_COL[k]}"></i></span></div>`; }).join('')}</div>`;
     if (S.sig.sb !== sb) { $('#statbar').innerHTML = sb; S.sig.sb = sb; }
-    const rk = m.status === 'lobby' ? '' : rankHTML(r); if (S.sig.rk !== rk) { $('#rankw').innerHTML = rk; S.sig.rk = rk; }
     const eb = evBarHTML(m); if (S.sig.eb !== eb) { $('#evbarw').innerHTML = eb; S.sig.eb = eb; } const ebEl = $('#evbarw'); if (ebEl) ebEl.classList.toggle('wp', !!S.panel);
     const ev = null, ec = ev ? `<div class="glass evcard"><b>${GM.EVENTS[ev.type].name}</b>${free ? freeEvDesc(ev.type) : GM.EVENTS[ev.type].desc}${ev.goal ? `<div class="pbar"><i style="width:${Math.min(100, (ev.prog || 0) / ev.goal * 100)}%"></i></div>${ev.prog || 0} / ${ev.goal}` : ''}</div>` : '';
     if (S.sig.ec !== ec) { $('#evcard').innerHTML = ec; S.sig.ec = ec; }
   }
   /* ----- 매 프레임 ----- */
-  let ctxT = 0, posT = 0, mapT = 0;
+  let ctxT = 0, posT = 0, mapT = 0, rankT = 0, gymT = 0;
   function onFrame(dt) {
     if (S.role === 'student' && S.me && meta() && S.screen === 'game') {
       const iv = inv(), m = meta();
-      W.me.carry = iv.carry || 0; W.me.gold = iv.gold || 0;
+      W.me.carry = iv.carry || 0; W.me.gold = iv.gold || 0; W.me.held = JOB.held;
       const sm = statV('spd'); W.me.spd = GROW.SPEED * sm * GM.speedMult(m); W.me.spdMul = sm;
       if (S.panel) W.me.anim = S.panel.kind === 'train' ? 'machine' : 'think'; else if (S.emActive) W.me.anim = 'think'; else if (S.gymM && W.me.tr) W.me.anim = 'machine'; else if (W.me.anim === 'machine' || W.me.anim === 'think') { W.setMachine(null); W.me.anim = 'idle'; }
-      if (S.gymM && !W.me.tr) S.gymM = null;
+      if (S.gymM && !W.me.tr) { S.gymM = null; S.set = null; }
+      if (S.set && Date.now() - S.set.last > 4500) { S.set = null; S.gymM = null; W.setMachine(null); }
       if (m.status === 'ended' && m.result === 'win' && S.seen.celebrated) W.me.anim = 'dance';
       ctxT -= dt; if (ctxT <= 0) { ctxT = 0.12; computeCtx(); }
       posT -= dt; if (posT <= 0) { posT = 0.2; sendPos(); }
       mapT -= dt; if (mapT <= 0) { mapT = 0.16; drawMap(); }
-      placePrompts();
-      const k = S.ctx.canPlace ? Math.min((iv.carry || 0) + (iv.gold || 0) * 3, statV('bpl') * (GM.buffs(m).fest ? 2 : 1)) : 0; W.setHighlight(k);
+      rankT -= dt; if (rankT <= 0) { rankT = 1; W.setRanks(rankBoards()); }
+      gymT -= dt; if (gymT <= 0) { gymT = 0.5; GROW.applyPrices(G()); W.setGymOwned(owned()); W.setGymBoards({ coins: iv.coins || 0, owned: owned() }); }
+      placePrompts(); boardUI();
+      const k = S.ctx.canPlace ? Math.min((iv.carry || 0) + (iv.gold || 0) * 3, bulkV() * (GM.buffs(m).fest ? 2 : 1)) : 0; W.setHighlight(k);
     }
-    if (S.role !== 'student') { mapT -= dt; if (mapT <= 0) { mapT = 1; const f = $('#fps'); if (f) f.textContent = W.fps + 'fps'; } }
+    if (S.role !== 'student') { mapT -= dt; if (mapT <= 0) { mapT = 1; const f = $('#fps'); if (f) f.textContent = W.fps + 'fps'; } rankT -= dt; if (rankT <= 0 && S.room && S.room.meta) { rankT = 1.5; W.setRanks(rankBoards()); } }
   }
   const ANIMI = { idle: 0, walk: 1, mine: 2, place: 3, machine: 4, dance: 5, jump: 6, think: 7, cheer: 8 };
   function sendPos() {
-    const me = W.me, p = { x: +me.x.toFixed(2), z: +me.z.toFixed(2), y: +me.y.toFixed(2), r: +me.rot.toFixed(2), a: ANIMI[me.anim] || 0, tr: me.tr || '', c: me.carry, g: me.gold, s: +(me.spdMul || 1).toFixed(1) };
+    const me = W.me, p = { x: +me.x.toFixed(2), z: +me.z.toFixed(2), y: +me.y.toFixed(2), r: +me.rot.toFixed(2), a: ANIMI[me.anim] || 0, tr: me.tr || '', c: me.carry, g: me.gold, s: +(me.spdMul || 1).toFixed(1), j: JOB.held || 0 };
     if (S.lu) p.lu = S.lu; if (S.myPl) p.pl = S.myPl;
-    const L = S.lastPos, moved = !L || Math.hypot(p.x - L.x, p.z - L.z) > 0.12 || Math.abs(p.y - L.y) > 0.1 || Math.abs(p.r - L.r) > 0.15 || p.a !== L.a || p.tr !== L.tr || p.c !== L.c || p.g !== L.g || p.lu !== L.lu || (p.pl && (!L.pl || p.pl.t !== L.pl.t));
+    const L = S.lastPos, moved = !L || Math.hypot(p.x - L.x, p.z - L.z) > 0.12 || Math.abs(p.y - L.y) > 0.1 || Math.abs(p.r - L.r) > 0.15 || p.a !== L.a || p.tr !== L.tr || p.c !== L.c || p.g !== L.g || p.j !== L.j || p.lu !== L.lu || (p.pl && (!L.pl || p.pl.t !== L.pl.t));
     if (!moved && L && Date.now() - L.ts < 8000) return;
     p.t = NET.now(); S.lastPos = Object.assign({ ts: Date.now() }, p);
     NET.set(`pos/${S.code}/${S.me.key}`, p).catch(() => { });
   }
+
+  /* ================= 랭킹 광장 데이터 (게시판 · 시상대) ================= */
+  function rankBoards() {
+    const r = S.room, m = r.meta, free = FREE(), myKey = S.me && S.me.key, L = GM.players(r).filter(p => !p.kicked);
+    if ((m.settings || {}).rank === false) { const off = { title: '랭킹 쉬는 중', sub: '선생님이 랭킹을 숨겼어요', col: '#455A64', off: '모두 함께 피라미드를 완성해요!' }; return { boards: free ? [off, off] : [off, off, off, off], top3: [] }; }
+    const mk = (title, sub, col, unit, val, subOf, empty) => {
+      const arr = L.map(p => ({ p, v: val(p) })).filter(x => x.v > 0).sort((a, b) => b.v - a.v || String(a.p.nick).localeCompare(b.p.nick));
+      const mi = arr.findIndex(x => x.p.key === myKey);
+      return { title, sub, col, unit, empty, rows: arr.slice(0, 10).map(x => ({ nick: x.p.nick, v: x.v, sub: subOf ? subOf(x.p) : '', look: x.p.look, me: x.p.key === myKey })), mine: mi >= 0 ? { rank: mi + 1, v: arr[mi].v } : null, self: S.role === 'student', top: arr.slice(0, 3).map(x => ({ pid: x.p.key, nick: x.p.nick, look: x.p.look })) };
+    };
+    const lvl = p => { const l = p.lv || {}; return (l.s || 1) + (l.t || 1); };
+    const b1 = mk('블록 기여 TOP 10', '피라미드에 직접 쌓은 블록', '#E8A21B', '블록', p => p.pl || 0, null, '블록을 쌓아 1등에 도전!');
+    const b2 = mk('능력치 TOP 10', 'SPEED 레벨 + STRENGTH 레벨', '#E91E63', 'Lv', lvl, p => `속도 Lv.${(p.lv || {}).s || 1} · 힘 Lv.${(p.lv || {}).t || 1}`, '헬스장에서 훈련해요!');
+    const boards = [b1, b2];
+    if (!free) {
+      boards.push(mk(SOC() ? '역사 탐구 TOP 10' : '수학 성취 TOP 10', '스스로 해결 · 끝까지 도전 · 연속 정답 점수', '#1E88E5', '점', p => (p.ls || {}).sc || 0, p => `${(p.ls || {}).n || 0}문제 해결`, '문제를 풀면 점수가 쌓여요'));
+      boards.push(mk('연속 정답 TOP 10', '한 번에 이어서 맞힌 최고 기록', '#43A047', '연속', p => (p.ls || {}).bs || 0, null, '연속으로 맞혀 봐요!'));
+    }
+    return { boards: boards.map(b => { const o = Object.assign({}, b); delete o.top; return o; }), top3: b1.top };
+  }
+
+  /* ================= 작업장 (WORK YARD) ================= */
+  const JOB = window.__JOB = { held: 0, type: null, t0: 0, dest: null, item: null, last: '', same: 0, combo: 0, lastDone: 0, log: [], yard: null };
+  const rint = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
+  const MATH_K = [12, 18, 24, 28, 30, 32, 36, 40, 42, 45, 48, 54, 56, 63, 64, 72];
+  function pairsOf(k) { const o = []; for (let p = 2; p <= 9; p++) if (k % p === 0) { const q = k / p; if (q % 10 && q > 1) o.push([p, q]); } return o; }
+  const dec = v => (Math.round(v * 100) / 100).toString();
+  function newYard() {
+    const P = W.POS, wx = P.work[0], wz = P.work[1], items = [], free = FREE() || SOC(), id0 = Date.now().toString(36);
+    let labels, plan = [];
+    if (free) { labels = ['빨강', '파랑', '노랑']; for (let i = 0; i < 6; i++) plan.push([i % 3, '']); }
+    else {
+      const ks = MATH_K.filter(k => pairsOf(k).length >= 2).sort(() => Math.random() - 0.5).slice(0, 3); labels = ks.map(k => dec(k / 10));
+      ks.forEach((k, b) => { const pr = pairsOf(k).sort(() => Math.random() - 0.5).slice(0, 2); pr.forEach(([p, q]) => plan.push([b, Math.random() < 0.5 ? `${dec(q / 10)} × ${p}` : `${p} × ${dec(q / 10)}`])); });
+    }
+    plan.sort(() => Math.random() - 0.5).forEach(([b, label], i) => {
+      const x = wx - 10 + Math.random() * 15, z = wz - 2.5 + Math.random() * 6.5;
+      items.push({ id: id0 + i, x, z, b, label, col: free ? [0xE53935, 0x1E88E5, 0xFDD835][b] : 0xD7B98A });
+    });
+    JOB.yard = { labels, items }; W.setBins(labels); W.setYardItems(items);
+  }
+  function destList() {
+    const P = W.POS, half = W.st.N * W.st.bs / 2, g0 = W.gyms[0];
+    return [['시작 광장', P.spawn[0], P.spawn[1] - 3], ['오아시스', P.oasis[0] + 9, P.oasis[1]], ['랭킹 광장 입구', P.rank[0], P.rank[1] + 17], ['채석장 입구', P.quarry[0] + 13, P.quarry[1] + 3], ['스핑크스', P.sphinx[0] + 8, P.sphinx[1] + 6], ['BASIC GYM 앞', g0.door[0], g0.door[1]], ['피라미드 앞', 0, half + 7]];
+  }
+  function jobPay(type, base, x, z) {
+    const g = G(), now = Date.now(); let amt = base; const notes = [];
+    JOB.same = JOB.last === type ? JOB.same + 1 : 1; JOB.last = type;
+    if (JOB.same > g.tiredAfter) { amt = Math.max(1, Math.round(amt * 0.5)); notes.push('같은 일만 계속하면 지쳐요 ×½ · 다른 작업도 해 봐요'); }
+    JOB.combo = now - JOB.lastDone < 30000 ? JOB.combo + 1 : 1; JOB.lastDone = now;
+    JOB.log = JOB.log.filter(a => now - a[0] < 60000); const recent = JOB.log.reduce((a, b) => a + b[1], 0);
+    if (recent > g.rateCap) { amt = Math.max(1, Math.round(amt * 0.5)); notes.push('1분에 너무 많이 벌었어요 ×½ · 훈련·건설도 해 봐요'); }
+    let bonus = 0; if (JOB.combo % g.comboEvery === 0) { bonus = g.comboBonus; notes.push(`${JOB.combo}연속 작업 보너스 +${bonus}`); }
+    const total = amt + bonus; JOB.log.push([now, total]);
+    const id = `${S.me.key}-job-${now.toString(36)}${Math.random().toString(36).slice(2, 5)}`;
+    GM.jobPay(S.code, S.me.key, id, type, total, bonus);
+    W.popText(x, W.me.y + Avatar.HEIGHT + 1.4, z, `+${total} 코인`, '#FFC83D'); W.burst(x, W.me.y + 1.6, z, 26, [0xFFD54F, 0xFFF3B0, 0xFFB300], 6); sx.coin();
+    const cb = $('#coinbox'); if (cb) { cb.classList.remove('bump'); void cb.offsetWidth; cb.classList.add('bump'); }
+    if (notes.length) toast(notes.join(' · '), 2400);
+  }
+  function jobCtx(d) {
+    const P = W.POS;
+    if (!JOB.held) {
+      if (d(P.jobA[0], P.jobA[1]) < 3.4) return { kind: 'jobA', anchor: [P.jobA[0], 3.6, P.jobA[1]] };
+      if (d(P.jobC[0], P.jobC[1]) < 3.2) return { kind: 'pkgC', anchor: [P.jobC[0], 3.6, P.jobC[1]] };
+      const it = W.nearYardItem(2.3); if (it) return { kind: 'itemB', info: { it }, anchor: [it.x, 2.6, it.z] };
+    } else if (JOB.type === 'A') { if (d(P.jobAd[0], P.jobAd[1]) < 2.8) return { kind: 'dropA', anchor: [P.jobAd[0], 3.2, P.jobAd[1]] }; }
+    else if (JOB.type === 'B') { const b = W.nearBin(2.8); if (b >= 0) return { kind: 'binB', info: { b }, anchor: [P.bins[b][0], 3.4, P.bins[b][1]] }; }
+    else if (JOB.type === 'C' && JOB.dest) { if (d(JOB.dest[1], JOB.dest[2]) < 3.6) return { kind: 'deliverC', anchor: [JOB.dest[1], 3.4, JOB.dest[2]] }; }
+    return null;
+  }
+  function doJob(kind, info) {
+    const me = W.me, P = W.POS, now = Date.now();
+    if (kind === 'jobA') { JOB.held = 1; JOB.type = 'A'; JOB.t0 = now; W.doAct('place', 0.4); sx.pick(); toast('상자를 들었어요! 노란 칸(트럭)까지 옮겨요', 1800); }
+    else if (kind === 'dropA') { if (now - JOB.t0 < 2500) return toast('조금 더 걸어서 옮겨요!'); JOB.held = 0; JOB.type = null; W.doAct('place', 0.5); W.truckLoad(); jobPay('A', G().payA, me.x, me.z); }
+    else if (kind === 'pkgC') { const L = destList().filter(x => x[0] !== (JOB.lastDest || '')), dst = L[Math.floor(Math.random() * L.length)]; JOB.held = 9; JOB.type = 'C'; JOB.dest = dst; JOB.t0 = now; JOB.lastDest = dst[0]; W.setMarker({ x: dst[1], z: dst[2] }); W.doAct('place', 0.4); sx.pick(); banner(`${IC('gift', 'huge')}<div class="big">배송: ${dst[0]}</div><div class="sm">분홍 빛기둥까지 소포를 들고 가서 E · 화살표가 길을 알려 줘요</div>`, 2400); }
+    else if (kind === 'deliverC') { const dst = JOB.dest, dist = Math.hypot(dst[1] - P.jobC[0], dst[2] - P.jobC[1]), g = G(); JOB.held = 0; JOB.type = null; JOB.dest = null; W.setMarker(null); W.doAct('place', 0.5); jobPay('C', Math.round(g.payC0 + dist * g.payCm), me.x, me.z); }
+    else if (kind === 'itemB') { const it = info.it; JOB.item = it; JOB.held = FREE() || SOC() ? 2 + it.b : 5; JOB.type = 'B'; JOB.t0 = now; JOB.yard.items = JOB.yard.items.filter(x => x.id !== it.id); W.setYardItems(JOB.yard.items); W.doAct('place', 0.4); sx.pick(); toast(it.label ? `<b>${it.label}</b> = ? 값이 같은 통에 넣어요` : '같은 색 통에 넣어요', 2000); }
+    else if (kind === 'binB') {
+      const it = JOB.item, b = info.b; if (!it) return;
+      if (b !== it.b) { sx.bad(); toast(it.label ? `${it.label}은(는) ${JOB.yard.labels[b]}가 아니에요. 다시 계산해 봐요!` : '색이 달라요!', 2000); return; }
+      JOB.held = 0; JOB.type = null; JOB.item = null; W.doAct('place', 0.5); jobPay('B', G().payB, me.x, me.z);
+      if (!JOB.yard.items.length) setTimeout(newYard, 600);
+    }
+  }
+
+  /* ================= 상황 판단 (근처에 무엇이 있나) ================= */
   function computeCtx() {
     const me = W.me, m = meta(), now = NET.now(), ev = m.ev && m.ev.until > now && !m.ev.done ? m.ev : null, iv = inv(), P = W.POS;
     const d = (a, b) => Math.hypot(me.x - a, me.z - b);
@@ -3876,36 +4405,55 @@ var W = (function () {
     else if (ev && ev.type === 'pharaoh' && d(P.sphinx[0], P.sphinx[1]) < 12) { kind = 'pharaoh'; anchor = [P.sphinx[0], 9.5, P.sphinx[1]]; }
     else if (ev && ev.type === 'gold' && d(P.goldRock[0], P.goldRock[1]) < 7) { kind = 'gold'; anchor = [P.goldRock[0], 5.5, P.goldRock[1]]; }
     if (!kind) { const ch = S.room.chests || {}; const id = Object.keys(ch).find(k => !ch[k].by && d(ch[k].x, ch[k].z) < 3.8); if (id) { kind = 'chest'; info.id = id; anchor = [ch[id].x, 2.6, ch[id].z]; } }
+    if (!kind) { const j = jobCtx(d); if (j) { kind = j.kind; info = j.info || {}; anchor = j.anchor; } }
+    if (!kind) { const t = W.nearGymDoor(4.4); if (t != null && t > owned()) { const G2 = W.gyms[t]; kind = 'gymbuy'; info.t = t; anchor = [G2.door[0], 4.2, G2.door[1]]; } }
     if (!kind) { const mc = W.nearestMachine(3); if (mc) { kind = 'train'; info.m = mc; anchor = [mc.x, mc.y + 3, mc.z]; } }
-    const stackH = Math.ceil(Math.min(40, (iv.carry || 0) + (iv.gold || 0)) / 4) * 0.52; // 머리 위 블록 더미 위로 안내 표시
+    if (!kind) { const b = W.nearBoard(); if (b >= 0) { kind = 'board'; info.b = b; anchor = [me.x, me.y + Avatar.HEIGHT + 1.4, me.z]; } }
+    const stackH = Math.ceil(Math.min(60, (iv.carry || 0) + (iv.gold || 0)) / 4) * 0.52;
     if (!kind && d(P.quarry[0], P.quarry[1]) < W.QUARRY_R) { kind = 'mine'; anchor = [me.x, me.y + Avatar.HEIGHT + 1.2 + stackH, me.z]; }
-    const carry = (iv.carry || 0) + (iv.gold || 0), dist = W.distToBuild(me.x, me.y, me.z), rng = statV('rng');
-    S.ctx = { kind, info, anchor, canPlace: carry > 0 && dist <= rng, dist, rng, carry, ev };
-    const be = $('#btnE'), bq = $('#btnQ'); if (be) be.classList.toggle('dis', !kind); if (bq) bq.classList.toggle('dis', !S.ctx.canPlace);
+    const carry = (iv.carry || 0) + (iv.gold || 0), dist = W.distToBuild(me.x, me.y, me.z), rng = GROW.RANGE, canPlace = carry > 0 && dist <= rng;
+    if (!kind && canPlace) kind = 'place';
+    S.ctx = { kind, info, anchor, canPlace, dist, rng, carry, ev };
+    const be = $('#btnE'), bq = $('#btnQ'); if (be) be.classList.toggle('dis', !kind); if (bq) bq.classList.toggle('dis', !canPlace);
   }
   /* 로블록스식 근접 안내: 물체 위에 [E] 버튼 + 행동 이름 */
   function placePrompts() {
-    const box = $('#pps'); if (!box) return; const c = S.ctx, m = meta(), out = [];
-    if (!(S.panel || S.emActive || m.status !== 'play') && c.anchor) {
-      const iv = inv(), rub = (S.room.build || {}).rub || 0, cap = statV('str'), free = FREE(); let k = 'E', a = '', s = '', cls = '';
-      if (c.kind === 'train') { const st = c.info.m.stat; a = free ? (st === 'spd' || st === 'str' ? `${ST[st].en} 운동하기` : `${ST[st].en} 업그레이드`) : `${ST[st].en} 훈련하기`; s = free ? (st === 'spd' || st === 'str' ? 'E를 누를 때마다 1회 운동' : `${GROW.upCost(myLv(st).lv, G())}코인`) : `${ST[st].machine} · 문제를 풀어 성장`; }
-      else if (c.kind === 'mine') { if (c.carry >= cap) { a = '더 들 수 없어요'; s = `${c.carry}/${cap} · 피라미드로!`; cls = 'warn'; k = '!'; } else { const x2 = GM.buffs(m).x2 ? 2 : 1; a = `블록 캐기 ×${Math.min(statV('bpu') * x2, cap - c.carry)}`; s = x2 > 1 ? '대성공 보너스: 2배로 캐요!' : '채석장 돌은 무한!'; } }
+    const box = $('#pps'); if (!box) return; const c = S.ctx, m = meta(), out = [], busy = S.panel || S.emActive || m.status !== 'play' || W.boardView >= 0;
+    if (!busy && c.anchor && c.kind !== 'place') {
+      const cap = capV(), free = FREE(); let k = 'E', a = '', s = '', cls = '';
+      if (c.kind === 'train') {
+        const mm = c.info.m, st = mm.stat, G2 = GYMS[mm.tier || 0];
+        if ((mm.tier || 0) > owned()) { a = '이용권이 필요해요'; s = G2.en; cls = 'warn'; k = '!'; }
+        else if (free) { const S2 = S.set && S.set.m === mm ? S.set : null, g = G(); a = S2 ? `E 계속 누르기! ${Math.min(S2.taps, g.setTaps)}/${g.setTaps}` : `${ST[st].en} 운동하기`; s = S2 ? `1세트 완료하면 +${Math.round(g.setXp * G2.mult * 10) / 10} XP` : `${ST[st].machine} · 훈련 효과 ×${G2.mult}`; if (S2) cls = 'place'; }
+        else { a = `${ST[st].en} 훈련하기`; s = `${ST[st].machine} · 문제를 풀면 경험치 ×${G2.mult}`; }
+      }
+      else if (c.kind === 'mine') { if (c.carry >= cap) { a = '더 들 수 없어요'; s = `${c.carry}/${cap} · 피라미드로!`; cls = 'warn'; k = '!'; } else { const x2 = GM.buffs(m).x2 ? 2 : 1; a = `블록 캐기 ×${Math.min(bulkV() * x2, cap - c.carry)}`; s = x2 > 1 ? '대성공 보너스: 2배로 캐요!' : `블록 더미에서 · 최대 ${cap}개`; } }
+      else if (c.kind === 'gymbuy') { const t = c.info.t, G2 = GYMS[t], coins = inv().coins || 0; if (t !== owned() + 1) { a = `${G2.en} 잠김`; s = `먼저 ${GYMS[t - 1].en} 이용권`; cls = 'warn'; k = '!'; } else if (coins < G2.price) { a = `이용권 ${G2.price}코인`; s = `코인 ${G2.price - coins}개 더 필요`; cls = 'warn'; k = '!'; } else { a = `이용권 구매 ${G2.price}코인`; s = `훈련 효과 ×${G2.mult} · 영구 이용`; cls = 'place'; } }
+      else if (c.kind === 'board') { a = '게시판 가까이 보기'; s = '◀ ▶ 로 다른 게시판'; }
+      else if (c.kind === 'jobA') { a = '상자 들기'; s = `작업 A · 트럭까지 옮기면 ${G().payA}코인`; }
+      else if (c.kind === 'dropA') { a = '트럭에 싣기'; s = '작업 A 완료!'; cls = 'place'; }
+      else if (c.kind === 'pkgC') { a = '소포 받기'; s = '작업 C · 먼 곳일수록 많이 받아요'; }
+      else if (c.kind === 'deliverC') { a = '소포 배달하기'; s = JOB.dest ? JOB.dest[0] : ''; cls = 'place'; }
+      else if (c.kind === 'itemB') { a = c.info.it.label ? `자재 집기: ${c.info.it.label}` : '자재 집기'; s = '작업 B · 알맞은 통에 넣어요'; }
+      else if (c.kind === 'binB') { a = `${JOB.yard ? JOB.yard.labels[c.info.b] : ''} 통에 넣기`; s = JOB.item && JOB.item.label ? JOB.item.label : '같은 색인지 확인!'; cls = 'place'; }
       else if (c.kind === 'meteor') { a = '황금 운석'; s = free ? '코인 +30' : '특별 문제 도전'; } else if (c.kind === 'pharaoh') { a = '파라오의 시험'; s = free ? '코인 +25 · 황금 왕관' : '응용 문제 도전'; } else if (c.kind === 'gold') { a = '황금 블록'; s = free ? '황금 블록 2개' : '문제를 풀어 획득'; } else if (c.kind === 'chest') { a = '보물상자 열기'; s = free ? '코인 +30' : '보너스 블록 +6'; }
       out.push({ p: c.anchor, k, a, s, cls });
     }
-    if (!(S.panel || S.emActive || m.status !== 'play') && c.carry > 0 && (c.canPlace || c.dist < 25)) { const me = W.me; const sh = Math.ceil(Math.min(40, c.carry) / 4) * 0.52; out.push({ p: [me.x, me.y + Avatar.HEIGHT + sh + (out.length ? 2.6 : 1.2), me.z], k: c.canPlace ? 'Q' : '!', a: c.canPlace ? `블록 놓기 ×${Math.min(c.carry, statV('bpl'))}` : '피라미드에 더 가까이', s: c.canPlace ? '초록 칸에 쌓여요' : `${c.dist.toFixed(1)}m / 범위 ${c.rng}m`, cls: c.canPlace ? 'place' : 'warn' }); }
+    if (!busy && c.carry > 0 && (c.canPlace || c.dist < 25)) { const me = W.me; const sh = Math.ceil(Math.min(60, c.carry) / 4) * 0.52; out.push({ p: [me.x, me.y + Avatar.HEIGHT + sh + (out.length ? 2.6 : 1.2), me.z], k: c.canPlace ? (c.kind === 'place' ? 'E' : 'Q') : '!', a: c.canPlace ? `블록 놓기 ×${Math.min(c.carry, bulkV())}` : '피라미드에 더 가까이', s: c.canPlace ? '초록 칸에 쌓여요' : `${c.dist.toFixed(1)}m / ${c.rng}m 안에서`, cls: c.canPlace ? 'place' : 'warn' }); }
     const html = out.map((o, i) => `<div class="pp ${o.cls}" data-i="${i}"><kbd>${o.k}</kbd><div><span class="pa">${o.a}</span><span class="ps">${o.s}</span></div></div>`).join('');
     if (S.sig.pps !== html) { box.innerHTML = html; S.sig.pps = html; }
     const els = box.children; out.forEach((o, i) => { const el = els[i]; if (!el) return; const pr = W.project(o.p[0], o.p[1], o.p[2]); el.style.display = pr.vis ? '' : 'none'; el.style.left = Math.max(110, Math.min(innerWidth - 110, pr.x)) + 'px'; el.style.top = Math.max(120, Math.min(innerHeight - 110, pr.y)) + 'px'; });
   }
   function guideTarget() {
-    const iv = inv(), P = W.POS, carry = (iv.carry || 0) + (iv.gold || 0), rub = (S.room.build || {}).rub || 0, ev = S.ctx.ev, free = FREE();
+    const iv = inv(), P = W.POS, carry = (iv.carry || 0) + (iv.gold || 0), ev = S.ctx.ev;
     if (S.guide) return S.guide;
     if (ev && !(S.priv && (S.priv.evd || {})[ev.id]) && meta().status === 'play') { if (ev.type === 'meteor') return { x: ev.x, z: ev.z, name: '황금 운석' }; if (ev.type === 'gold') return { x: P.goldRock[0], z: P.goldRock[1], name: '황금 바위' }; if (ev.type === 'pharaoh') return { x: P.sphinx[0], z: P.sphinx[1], name: '스핑크스' }; }
     if (meta().status === 'lobby') return { x: P.spawn[0], z: P.spawn[1], name: '대기 광장' };
+    if (JOB.type === 'A') return { x: P.jobAd[0], z: P.jobAd[1], name: '트럭' };
+    if (JOB.type === 'B') return { x: P.bins[1][0], z: P.bins[1][1], name: '분류 통' };
+    if (JOB.type === 'C' && JOB.dest) return { x: JOB.dest[1], z: JOB.dest[2], name: JOB.dest[0] };
     if (carry > 0) return { x: 0, z: 0, name: 'PYRAMID' };
     return { x: P.quarry[0], z: P.quarry[1], name: 'QUARRY' };
-    return { x: P.gym[0], z: P.gym[1], name: 'GYM' };
   }
   function drawMap() {
     const cv = $('#mmap'); if (!cv) return; const g = cv.getContext('2d'), W2 = cv.width, R0 = W2 / 2, sc = R0 / 72, me = W.me, yaw = W.cam.yaw, P = W.POS;
@@ -3913,11 +4461,13 @@ var W = (function () {
     g.translate(R0, R0); g.rotate(yaw); g.translate(-me.x * sc, -me.z * sc);
     const half = (W.st.N * W.st.bs / 2) * sc;
     g.fillStyle = '#B9A07E'; g.beginPath(); g.arc(P.quarry[0] * sc, P.quarry[1] * sc, W.QUARRY_R * sc, 0, 7); g.fill();
-    g.fillStyle = '#E91E63'; g.fillRect((P.gym[0] - 15) * sc, (P.gym[1] - 7.5) * sc, 30 * sc, 15 * sc); g.fillStyle = '#00897B'; g.fillRect((P.upg[0] - 15) * sc, (P.upg[1] - 7.5) * sc, 30 * sc, 15 * sc);
-    g.fillStyle = '#7E57C2'; g.beginPath(); g.arc(P.range[0] * sc, P.range[1] * sc, 9 * sc, 0, 7); g.fill(); g.fillStyle = '#CDBA96'; g.beginPath(); g.arc(P.spawn[0] * sc, P.spawn[1] * sc, W.LOBBY_R * sc, 0, 7); g.fill();
+    g.fillStyle = '#1565C0'; g.fillRect((P.work[0] - 14) * sc, (P.work[1] - 10) * sc, 28 * sc, 20 * sc);
+    W.gyms.forEach(G2 => { g.save(); g.translate(G2.x * sc, G2.z * sc); g.rotate(-G2.phi); g.globalAlpha = G2.t <= owned() ? 1 : 0.45; g.fillStyle = GYMS[G2.t].col; g.fillRect(-8 * sc, -6 * sc, 16 * sc, 12 * sc); g.restore(); });
+    g.fillStyle = '#4527A0'; g.beginPath(); g.arc(P.rank[0] * sc, P.rank[1] * sc, 15 * sc, 0, 7); g.fill(); g.fillStyle = '#CDBA96'; g.beginPath(); g.arc(P.spawn[0] * sc, P.spawn[1] * sc, W.LOBBY_R * sc, 0, 7); g.fill();
     g.fillStyle = '#C9A46A'; g.fillRect(-half, -half, half * 2, half * 2); const pr = ((S.room.build || {}).n || 0) / Math.max(1, meta().total); g.fillStyle = '#FFD54F'; g.fillRect(-half, half - half * 2 * Math.min(1, pr), half * 2, half * 2 * Math.min(1, pr));
     g.fillStyle = '#29A9E8'; g.beginPath(); g.arc(P.oasis[0] * sc, P.oasis[1] * sc, 7 * sc, 0, 7); g.fill();
     const ev = S.ctx.ev; if (ev && ev.type === 'meteor') { g.fillStyle = '#FF9800'; g.beginPath(); g.arc(ev.x * sc, ev.z * sc, 10, 0, 7); g.fill(); }
+    if (JOB.type === 'C' && JOB.dest) { g.fillStyle = '#FF4FA0'; g.beginPath(); g.arc(JOB.dest[1] * sc, JOB.dest[2] * sc, 10, 0, 7); g.fill(); }
     Object.values(S.room.chests || {}).forEach(c => { if (!c.by) { g.fillStyle = '#4FC3F7'; g.fillRect(c.x * sc - 6, c.z * sc - 6, 12, 12); } });
     Object.values(W.avatars).forEach(av => { if (av.isMe || !av.root.visible) return; g.fillStyle = '#fff'; g.strokeStyle = '#222'; g.lineWidth = 2; g.beginPath(); g.arc(av.root.position.x * sc, av.root.position.z * sc, 6, 0, 7); g.fill(); g.stroke(); });
     g.restore();
@@ -3925,36 +4475,61 @@ var W = (function () {
     const t = guideTarget(), dx = t.x - me.x, dz = t.z - me.z, dist = Math.hypot(dx, dz), a = Math.atan2(dx, dz), rel = -(a - (yaw + Math.PI));
     const ga = $('#garrow'); if (ga) { ga.querySelector('i').style.transform = `rotate(${(rel * 180 / Math.PI).toFixed(0)}deg)`; const tx = dist < 7 ? `${t.name} 도착!` : `${t.name} ${Math.round(dist)}m`; const spn = ga.querySelector('span'); if (spn.textContent !== tx) spn.textContent = tx; }
   }
+  /* ----- 랭킹 게시판 가까이 보기 ----- */
+  function boardUI() {
+    const on = W.boardView >= 0, el = $('#bview');
+    if (on && !el) { const g3 = $('#g3'); if (g3) g3.insertAdjacentHTML('beforeend', `<div class="bview" id="bview"><button class="btn xl" data-act="bprev">◀</button><button class="btn xl red" data-act="bclose">닫기 (E)</button><button class="btn xl" data-act="bnext">▶</button></div>`); }
+    else if (!on && el) el.remove();
+  }
   /* ----- 상호작용 ----- */
   function canAct() { const m = meta(); if (!S.me || !m) return false; if (m.status === 'lobby') { toast('선생님이 게임을 시작하면 사용할 수 있어요!'); return false; } if (m.status !== 'play') return false; if (S.panel || S.emActive) return false; return true; }
-  function doInteract() {
+  function doInteract(rep) {
+    if (W.boardView >= 0) { if (!rep) W.viewBoard(-1); return; }
     if (!canAct()) return; const c = S.ctx, free = FREE();
-    if (!c.kind) return toast('E는 시설·채석장·이벤트 장소에서 사용해요');
-    if (c.kind === 'train') { const st = c.info.m.stat; if (!free) return openTrain(c.info.m); if (st === 'spd' || st === 'str') return gymRep(c.info.m); return openShop(st); }
+    if (!c.kind) return rep ? null : toast('E는 블록 더미·시설·작업장·게시판 근처에서 사용해요');
+    if (c.kind === 'train') {
+      if (rep && free) return; // 누르고만 있으면 운동이 안 돼요 (한 번씩 눌러야 함)
+      const mm = c.info.m; if ((mm.tier || 0) > owned()) return toast(`${GYMS[mm.tier].en} 이용권이 필요해요. 입구 안내판에서 구매해요!`);
+      return free ? gymTap(mm) : openTrain(mm);
+    }
     if (c.kind === 'mine') return mine();
+    if (c.kind === 'place') return doPlace();
+    if (rep) return;
+    if (c.kind === 'gymbuy') return buyGym(c.info.t);
+    if (c.kind === 'board') { W.viewBoard(c.info.b); sx.click(); return; }
+    if (/^(jobA|dropA|pkgC|deliverC|itemB|binB)$/.test(c.kind)) return doJob(c.kind, c.info);
     if (c.kind === 'chest') return claimChest(c.info.id);
     return free ? freeEvent(c.kind) : openEv(c.kind);
   }
   async function mine() {
-    if (S.busy) return; const iv = inv(), cap = statV('str'), carry = (iv.carry || 0) + (iv.gold || 0), rub = (S.room.build || {}).rub || 0, free = FREE();
-    if (carry >= cap) return toast(`더 들 수 없어요! (${carry}/${cap}) ${free ? '헬스장 벤치프레스' : 'STRENGTH 훈련'}으로 근력을 키우면 더 많이 들 수 있어요.`);
-    S.busy = true; W.doAct('mine', 0.75); setTimeout(() => sx.pick(), 260);
-    try { const x2 = GM.buffs(meta()).x2 ? 2 : 1, res = await GM.pickup(S.code, S.me.key, Math.min(statV('bpu') * x2, cap - carry), cap, S.room, true); if (res.got) { W.popText(W.me.x, W.me.y + Avatar.HEIGHT + 1.6, W.me.z, `+${res.got}`, '#FFE08A'); W.burst(W.me.x, W.me.y + 1, W.me.z, 14, [0xE2C38C, 0xFFE27A], 4); } else toast('더 들 수 없어요! 피라미드로 가서 Q로 놓아요.'); }
+    if (S.busy) return; const iv = inv(), cap = capV(), carry = (iv.carry || 0) + (iv.gold || 0);
+    if (carry >= cap) return toast(`더 들 수 없어요! (${carry}/${cap}) 헬스장 벤치프레스로 STRENGTH를 키우면 더 많이 들어요.`);
+    S.busy = true; W.doAct('mine', 0.75);
+    try { const x2 = GM.buffs(meta()).x2 ? 2 : 1, res = await GM.pickup(S.code, S.me.key, Math.min(bulkV() * x2, cap - carry), cap, S.room, true); if (res.got) { W.takeBlocks(res.got, W.me.x, W.me.z, S.me.key); W.popText(W.me.x, W.me.y + Avatar.HEIGHT + 1.6, W.me.z, `+${res.got}`, '#FFE08A'); } else toast('더 들 수 없어요! 피라미드로 가서 놓아요.'); }
     catch (e) { console.warn(e); toast('네트워크가 느려요. 다시 눌러 주세요.'); }
     setTimeout(() => S.busy = false, 450);
   }
   async function doPlace() {
     if (!canAct() || S.busy) return; const c = S.ctx, free = FREE();
     if (!c.carry) return toast('들고 있는 블록이 없어요. 채석장에서 블록을 캐 와요!');
-    if (!c.canPlace) return toast(`피라미드에 더 가까이! (지금 ${c.dist.toFixed(1)}m · 배치 범위 ${c.rng}m) 점프로 계단을 올라가도 돼요.`);
+    if (!c.canPlace) return toast(`피라미드에 더 가까이! (지금 ${c.dist.toFixed(1)}m · ${c.rng}m 안에서) 점프로 계단을 올라가도 돼요.`);
     S.busy = true; W.doAct('place', 0.6);
     try {
       const m = meta(), ev = m.ev, fest = GM.buffs(m).fest, evProg = free && ev && !ev.done && ev.until > NET.now() && (ev.type === 'supply' || ev.type === 'fest');
-      const res = await GM.place(S.code, S.me.key, statV('bpl'), m.total, fest, { coin: free ? G().coinBlock : 0, evProg });
-      if (res && res.k) { for (let i = res.s; i < res.s + res.k; i++) S.plMap[i] = S.me.key; S.myPl = { s: res.s, k: res.k, t: NET.now() }; posT = 0; W.popText(W.me.x, W.me.y + Avatar.HEIGHT + 1.6, W.me.z, free ? `+${res.k * G().coinBlock} 코인` : `+${res.k}칸`, free ? '#FFC83D' : '#7DFFB5'); sx.place(); if (free) sx.coin(); }
+      const res = await GM.place(S.code, S.me.key, bulkV(), m.total, fest, { coin: G().coinBlock, evProg });
+      if (res && res.k) { for (let i = res.s; i < res.s + res.k; i++) S.plMap[i] = S.me.key; S.myPl = { s: res.s, k: res.k, t: NET.now() }; posT = 0; W.popText(W.me.x, W.me.y + Avatar.HEIGHT + 1.6, W.me.z, G().coinBlock ? `+${res.k}칸 · +${res.k * G().coinBlock}코인` : `+${res.k}칸`, '#7DFFB5'); sx.place(); }
       else if (res && !res.k) toast('피라미드가 이미 완성됐어요!');
     } catch (e) { console.warn(e); toast('네트워크가 느려요. 다시 눌러 주세요.'); }
     setTimeout(() => S.busy = false, 380);
+  }
+  /* 헬스장 이용권 (순서대로 · 한 번 사면 영구) */
+  async function buyGym(t) {
+    if (S.busy) return; const G2 = GYMS[t], coins = inv().coins || 0;
+    if (t !== owned() + 1) return toast(`먼저 ${GYMS[t - 1].en} 이용권을 사야 해요`);
+    if (coins < G2.price) return toast(`코인이 ${G2.price - coins}개 부족해요. 작업장에서 일해 봐요!`);
+    S.busy = true; let r = 'fail'; try { r = await GM.buyGym(S.code, S.me.key, t, G2.price); } catch (e) { console.warn(e); } S.busy = false;
+    if (r === 'ok') { sx.levelup(); W.setGymOwned(t); W.levelFx(S.me.key, `${G2.en} OPEN!`); banner(`${IC('muscle', 'huge')}<div class="big">${G2.en} 이용권 획득!</div><div class="sm">안으로 들어가 트레드밀·벤치프레스에서 훈련해요 · 훈련 효과 ×${G2.mult}</div>`, 2600, { confetti: true }); }
+    else toast(r === 'coins' ? '코인이 부족해요!' : r === 'own' ? '이미 가진 이용권이에요' : '잠시 후 다시 시도해요');
   }
   async function claimChest(id) {
     const r = await NET.tx(`rooms/${S.code}/chests/${id}/by`, v => v ? undefined : S.me.key);
@@ -3964,28 +4539,18 @@ var W = (function () {
     GM.enqueue({ id: `${S.me.key}-chest-${id}`, code: S.code, pid: S.me.key, u }); sx.chest();
     banner(`${IC('gift', 'huge')}<div class="big">희귀 보물상자!</div><div class="sm">${free ? '코인 +30' : '보너스 블록 6개를 바로 받았어요! 피라미드로!'}</div>`, 2400, { confetti: true });
   }
-  /* 순수 게임 모드: 헬스장 운동 (E를 누를 때마다 1회) */
-  let repT = 0, repFlush = null;
-  function gymRep(m) {
-    const now = Date.now(); if (now - repT < 600) return; repT = now;
-    if (!S.gymM || S.gymM !== m) { S.gymM = m; W.setMachine(m); }
-    const g = G(), b = GM.buffs(meta()), xp = Math.round(g.repXp * (b.oasis ? 1.5 : 1) * 10) / 10;
-    S.reps = (S.reps || 0) + xp; W.popText(m.x, m.y + 3.2, m.z, `+${xp} ${ST[m.stat].en}`, STAT_COL[m.stat]); sx.pop();
-    clearTimeout(repFlush); repFlush = setTimeout(flushReps, 1200);
-  }
-  function flushReps() { if (!S.reps || !S.gymM) { S.reps = 0; return; } const st = S.gymM.stat, n = S.reps; S.reps = 0; NET.update('', { [`priv/${S.code}/${S.me.key}/xp/${st}`]: NET.inc(n), [`priv/${S.code}/${S.me.key}/st/reps`]: NET.inc(1) }).catch(() => { }); }
-  function openShop(stat) {
-    const l = $('#layer'), L = myLv(stat), g = G(), maxed = L.lv >= g.maxLv, cost = GROW.upCost(L.lv, g), coins = inv().coins || 0, S2 = ST[stat];
-    const old = $('#drawer'); if (old) old.remove();
-    l.insertAdjacentHTML('beforeend', `<div class="drawer" id="drawer"><div class="panel" style="width:min(560px,100%)"><div class="ptitle">${IC('coin')} UPGRADE</div>
-      <div class="shopcard" style="--sc:${STAT_COL[stat]}"><span class="si">${IC(S2.icon)}</span><div class="grow"><b class="disp" style="font-size:24px">${S2.en}</b><div class="dim">${S2.name} · ${S2.desc}</div><div class="lvbig">Lv.${L.lv} <span style="font-size:18px">${fmtStat(stat, L.lv)}</span>${maxed ? '' : ` → Lv.${L.lv + 1} <span style="font-size:18px;color:#7DFFB5">${fmtStat(stat, L.lv + 1)}</span>`}</div></div></div>
-      <div class="row" style="margin-top:14px;justify-content:space-between"><span class="price">${IC('coin')} 내 코인 ${coins}</span>${maxed ? '<b>최고 레벨!</b>' : `<button class="btn green xl" data-act="buy" data-s="${stat}" ${coins < cost ? 'disabled' : ''}>${IC('coin')} ${cost} 업그레이드</button>`}</div>
-      ${coins < cost && !maxed ? '<p class="dim">코인이 부족해요. 블록을 피라미드에 쌓으면 코인을 얻어요!</p>' : ''}<div class="row" style="justify-content:flex-end;margin-top:8px"><button class="btn sm ghost" data-act="closedrawer">닫기</button></div></div></div>`);
-  }
-  async function buy(stat) {
-    const L = myLv(stat), g = G(), cost = GROW.upCost(L.lv, g); if (L.lv >= g.maxLv) return;
-    const ok = await GM.buy(S.code, S.me.key, stat, cost, L.need - L.cur);
-    if (ok) { sx.coin(); setTimeout(() => openShop(stat), 400); } else toast('코인이 부족해요!');
+  /* 자유 모드 운동: E를 한 번씩 눌러 1세트(기본 8번·최소 3.5초)를 채우면 경험치 × 헬스장 배율 */
+  function gymTap(m) {
+    const g = G(), now = Date.now();
+    if (!S.set || S.set.m !== m) { S.set = { m, taps: 0, t0: now, last: now, n: 0 }; S.gymM = m; W.setMachine(m); }
+    if (now - S.set.last < 110 && S.set.taps) return; S.set.last = now; S.set.taps++; sx.pop();
+    W.burst(m.x, m.y + 1.4, m.z, 4, [0xFFFFFF, m.stat === 'spd' ? 0x4FC3F7 : 0xFF5A6E], 2, { life: 0.4 });
+    if (S.set.taps >= g.setTaps && (now - S.set.t0) / 1000 >= g.setMin) {
+      const G2 = GYMS[m.tier || 0], b = GM.buffs(meta()), xp = Math.round(g.setXp * G2.mult * (b.oasis ? 1.5 : 1) * 10) / 10, P = `priv/${S.code}/${S.me.key}`, id = `${S.me.key}-set-${now.toString(36)}`;
+      GM.enqueue({ id, code: S.code, pid: S.me.key, u: { [`claims/${S.code}/${id}`]: { p: S.me.key, t: NET.serverTS() }, [`${P}/xp/${m.stat}`]: NET.inc(xp), [`${P}/st/sets`]: NET.inc(1), [`${P}/st/set_${m.stat}`]: NET.inc(1) } });
+      W.popText(m.x, m.y + 3.4, m.z, `+${xp} ${ST[m.stat].en}`, STAT_COL[m.stat]); W.burst(m.x, m.y + 2, m.z, 24, [0xFFD54F, 0xFFFFFF, m.stat === 'spd' ? 0x4FC3F7 : 0xFF5A6E], 5); sx.ok();
+      S.set = { m, taps: 0, t0: now, last: now, n: S.set.n + 1 };
+    }
   }
   async function freeEvent(kind) {
     const ev = S.ctx.ev; if (!ev) return; const P = `priv/${S.code}/${S.me.key}`, id = `${S.me.key}-${ev.id}`;
@@ -4005,11 +4570,11 @@ var W = (function () {
     joy.addEventListener('pointerdown', e => { id = e.pointerId; joy.setPointerCapture(id); const b = joy.getBoundingClientRect(); cx = b.left + b.width / 2; cy = b.top + b.height / 2; set(e.clientX - cx, e.clientY - cy); e.preventDefault(); });
     joy.addEventListener('pointermove', e => { if (e.pointerId === id) set(e.clientX - cx, e.clientY - cy); });
     const end = e => { if (e.pointerId !== id) return; id = null; set(0, 0); }; joy.addEventListener('pointerup', end); joy.addEventListener('pointercancel', end);
-    const hold = (el, fn, ms) => { let t = null; el.addEventListener('pointerdown', e => { e.preventDefault(); fn(); clearInterval(t); t = setInterval(fn, ms || 800); }); const stop = () => { clearInterval(t); t = null; }; el.addEventListener('pointerup', stop); el.addEventListener('pointercancel', stop); el.addEventListener('pointerleave', stop); };
-    hold($('#btnE'), () => doInteract(), 700); hold($('#btnQ'), () => doPlace());
+    const hold = (el, fn, ms) => { let t = null; el.addEventListener('pointerdown', e => { e.preventDefault(); fn(false); clearInterval(t); t = setInterval(() => fn(true), ms || 800); }); const stop = () => { clearInterval(t); t = null; }; el.addEventListener('pointerup', stop); el.addEventListener('pointercancel', stop); el.addEventListener('pointerleave', stop); };
+    hold($('#btnE'), r => doInteract(r), 700); hold($('#btnQ'), () => doPlace());
     $('#btnJ').addEventListener('pointerdown', e => { e.preventDefault(); W.me.jumpQ = true; });
   }
-  let holdT = null; window.addEventListener('keydown', e => { if (S.screen !== 'game' || !e.repeat) return; const k = e.key.toLowerCase(); if ((k === 'e' || k === 'q') && !holdT) { holdT = setTimeout(() => { holdT = null; }, 650); if (k === 'e' && (S.ctx.kind === 'mine' || (S.gymM && FREE()))) doInteract(); if (k === 'q') doPlace(); } });
+  let holdT = null; window.addEventListener('keydown', e => { if (S.screen !== 'game' || !e.repeat) return; const k = e.key.toLowerCase(); if ((k === 'e' || k === 'q') && !holdT) { holdT = setTimeout(() => { holdT = null; }, 650); if (k === 'e' && (S.ctx.kind === 'mine' || S.ctx.kind === 'place')) doInteract(true); if (k === 'q') doPlace(); } });
 
   /* ================= 수학 모드: 훈련 터미널 ================= */
   async function issue(prev, res, stat) {
@@ -4120,9 +4685,13 @@ var W = (function () {
     if (kind === 'em') { R = { mat: 0, xp: ok ? g.emXp : 0, bd: ok ? [['긴급 점검 정답', 0, g.emXp]] : [] }; if (ok && b.oasis) R.xp += Math.round(R.xp * 0.5); }
     else {
       R = GROW.reward({ ok, first: ok && q.att === 0, app: ok && (q.sp || q.diff === 'H' || q.diff === 'S' || GM.getQ(q).stages.length > 1), hint: q.hint > 0, recentAcc: accR, n10: rec.length, streak, mult: b.x2 ? 2 : 1, xmult: b.oasis ? 1.5 : 1 }, g);
-      if (kind === 'ev' && ok) { const et = q.evType; R.bd = R.bd.slice(); if (et === 'meteor') { R.blk = 8; R.xp += 15; R.bd.push(['황금 운석 보너스 블록', 8, 15]); } else if (et === 'gold') { R.gold = 2; R.xp += 12; R.bd.push(['황금 블록 2개 (1개 = 3칸)', 0, 12]); } else if (et === 'pharaoh') { R.blk = 6; R.xp += 15; R.acc = 'crown'; R.bd.push(['파라오의 보물 블록 + 황금 왕관', 6, 15]); } }
+      if (kind === 'ev' && ok) { const et = q.evType; R.bd = R.bd.slice(); if (et === 'meteor') { R.blk = 8; R.xp += 5; R.bd.push(['황금 운석 보너스 블록', 8, 5]); } else if (et === 'gold') { R.gold = 2; R.xp += 4; R.bd.push(['황금 블록 2개 (1개 = 3칸)', 0, 4]); } else if (et === 'pharaoh') { R.blk = 6; R.xp += 5; R.acc = 'crown'; R.bd.push(['파라오의 보물 블록 + 황금 왕관', 6, 5]); } }
     }
-    R.stat = kind === 'train' ? (q.stat || S.lastStat) : (S.lastStat || 'spd');
+    R.stat = kind === 'train' ? (q.stat || S.lastStat) : (S.lastStat || 'spd'); if (!ST[R.stat]) R.stat = 'spd';
+    if (kind === 'train' && R.xp) { const tier = (S.panel && S.panel.m && S.panel.m.tier) || 0, G2 = GYMS[tier]; if (G2.mult > 1) { const ex = Math.round(R.xp * (G2.mult - 1)); R.xp += ex; R.bd = R.bd.concat([[`${G2.en} ×${G2.mult}`, 0, ex]]); } }
+    // 학습 성취 점수 (공개 랭킹용): 난이도와 무관 · 스스로 해결 +3 · 틀린 뒤 끝까지 해결 +2 · 연속 정답 보너스(최대 +5)
+    const pts = ok ? 10 + (q.att === 0 && !(q.hint > 0) ? 3 : 0) + (q.att > 0 ? 2 : 0) + Math.min(5, Math.max(0, streak - 1)) : 0;
+    R.ls = { pts, bs: streak, prev: st.bs || 0 };
     // 문제 보상은 경험치만 (블록은 채석장에서 · 이벤트 보너스 블록만 예외)
     R.mat = 0; R.bd = R.bd.map(x => [x[0].replace(/ 자재/g, ''), x === R.bd[R.bd.length - 1] && R.blk ? R.blk : 0, x[2]]).filter(x => x[1] || x[2]);
     R.rec = rec; R.streak = streak; return R;
@@ -4199,22 +4768,27 @@ var W = (function () {
     let h = '';
     if (k === 'quest') {
       const step = carry > 0 ? 3 : 2, ev = S.ctx.ev;
+      const lrn = SOC() ? '역사 퀴즈' : '수학 문제', G2 = GYMS[owned()], nx = GYMS[owned() + 1];
       h = `<div class="ptitle">${IC('flag')} QUESTS</div>
-        ${free ? '' : `<div class="quest ${step === 1 ? 'now' : ''}"><span class="qn">1</span><div><b>GYM · UPGRADES · RANGE에서 문제 풀기</b><br><small class="dim">기구 앞에서 E → 문제를 맞히면 그 능력치 경험치 → 레벨 UP (더 빨리 · 더 많이)</small></div></div>`}
-        <div class="quest ${step === 2 ? 'now' : ''}"><span class="qn">${free ? 1 : 2}</span><div><b>QUARRY에서 블록 캐기</b> <small>(돌은 무한!)</small><br><small class="dim">주황 원 안에서 E → 한 번에 ${statV('bpu')}개, 최대 ${statV('str')}개까지 머리 위에 들어요</small></div></div>
-        <div class="quest ${step === 3 ? 'now' : ''}"><span class="qn">${free ? 2 : 3}</span><div><b>PYRAMID에 블록 놓기</b> <small>(운반 중 ${carry})</small><br><small class="dim">배치 범위 ${statV('rng')}m 안에서 Q → 한 번에 ${statV('bpl')}개${free ? ` · 블록마다 ${g.coinBlock}코인` : ''} · 점프로 계단을 올라갈 수도 있어요</small></div></div>
-        ${free ? `<div class="quest"><span class="qn">3</span><div><b>코인으로 업그레이드</b><br><small class="dim">GYM: SPEED·STRENGTH 운동(E 연타) · UPGRADES: BULK PICKUP·BULK PLACE · RANGE: 배치 범위</small></div></div>` : ''}
+        <div class="quest ${step === 2 ? 'now' : ''}"><span class="qn">1</span><div><b>QUARRY에서 블록 캐기</b><br><small class="dim">블록 더미 옆에서 E → 한 번에 ${bulkV()}개, 최대 ${capV()}개까지 들어요 (STRENGTH)</small></div></div>
+        <div class="quest ${step === 3 ? 'now' : ''}"><span class="qn">2</span><div><b>PYRAMID에 블록 놓기</b> <small>(운반 중 ${carry})</small><br><small class="dim">피라미드 ${GROW.RANGE}m 안에서 E 또는 Q → 한 번에 ${bulkV()}개${g.coinBlock ? ` · 블록마다 ${g.coinBlock}코인` : ''}</small></div></div>
+        <div class="quest"><span class="qn">3</span><div><b>WORK YARD에서 일하기</b><br><small class="dim">A 상자 운반 · B 자재 분류${free || SOC() ? '' : '(곱셈 값이 같은 통에!)'} · C 배송 → 코인</small></div></div>
+        <div class="quest"><span class="qn">4</span><div><b>헬스장에서 훈련하기</b> <small>(지금 ${G2.en} ×${G2.mult})</small><br><small class="dim">${free ? '트레드밀·벤치프레스에서 E를 한 번씩 눌러 세트 완료' : '트레드밀·벤치프레스에서 ' + lrn + '를 맞히면 경험치'}${nx ? ` · 다음: ${nx.en} 이용권 ${nx.price}코인 (×${nx.mult})` : ' · 최고 등급!'}</small></div></div>
+        <div class="quest"><span class="qn">5</span><div><b>LEADERBOARD 광장에서 순위 보기</b><br><small class="dim">피라미드 남쪽 · 게시판 앞에서 E</small></div></div>
         ${ev ? `<div class="quest now"><span class="qn">★</span><div><b>${GM.EVENTS[ev.type].name}</b><br><small class="dim">${free ? freeEvDesc(ev.type) : GM.EVENTS[ev.type].desc}</small></div></div>` : ''}
         <p class="dim">우리 반 목표: 시간 안에 피라미드 100% 완성!${free ? '' : ' 중간중간 긴급 안전 점검이 오면 모두 함께 문제를 풀어요.'}</p>`;
     } else if (k === 'stats' || k === 'train') {
       const rec = String(st.rec || ''), racc = rec.length ? Math.round(rec.split('').filter(x => x === '1').length / rec.length * 100) : null;
       h = `<div class="ptitle">${IC(k === 'train' ? 'muscle' : 'user')} ${k === 'train' ? 'TRAINING' : 'MY BUILDER'}</div>
-        ${k === 'stats' ? `<div class="resrow"><span>${IC('block')}<b>${st.placed || 0}</b><small>쌓은 블록</small></span>${free ? `<span>${IC('coin')}<b>${st.coins || 0}</b><small>번 코인</small></span>` : `<span>${IC('check')}<b>${st.ok || 0}</b><small>해결한 문제</small></span><span>${IC('chart')}<b>${racc == null ? '-' : racc + '%'}</b><small>최근 정답률</small></span>`}</div>` : `<p class="dim" style="margin-top:0">${free ? 'GYM에서 E를 누를 때마다 운동해요(SPEED·STRENGTH). UPGRADES와 RANGE에서는 코인으로 업그레이드해요.' : '돈이 필요 없어요! ' + (SOC() ? '역사 퀴즈' : '수학 문제') + '를 푸는 것이 곧 운동이에요. 기구 앞에서 E → 문제를 맞히면 그 능력치 경험치가 올라요. (가만히 있으면 오르지 않아요)'}</p>`}
-        <div class="statcards">${GROW.STAT_IDS.map(s => { const L = myLv(s), S2 = ST[s], where = { spd: 'GYM · 트레드밀', str: 'GYM · 벤치프레스', bpu: 'UPGRADES · BULK PICKUP', bpl: 'UPGRADES · BULK PLACE', rng: 'RANGE 관측소' }[s]; return `<div class="scard" style="--sc:${STAT_COL[s]}"><h4>${IC(S2.icon)} ${S2.en}</h4><div class="lv">Lv.${L.lv} <small style="font-size:16px">${fmtStat(s, L.lv)}${L.lv < g.maxLv ? ` → ${fmtStat(s, L.lv + 1)}` : ''}</small></div><div class="pbar"><i style="width:${L.need ? Math.round(L.cur / L.need * 100) : 100}%"></i></div><p>${S2.name} · ${S2.desc}</p><p>${where}${free && s !== 'spd' && s !== 'str' ? ` · ${GROW.upCost(L.lv, g)}코인` : ''}</p><button class="btn sm ghost" data-act="guide" data-s="${s}">${IC('map')} 길 안내</button></div>`; }).join('')}</div>`;
+        ${k === 'stats' ? `<div class="resrow"><span>${IC('block')}<b>${st.placed || 0}</b><small>쌓은 블록</small></span>${free ? `<span>${IC('coin')}<b>${st.coins || 0}</b><small>번 코인</small></span>` : `<span>${IC('check')}<b>${st.ok || 0}</b><small>해결한 문제</small></span><span>${IC('chart')}<b>${racc == null ? '-' : racc + '%'}</b><small>최근 정답률</small></span>`}</div>` : `<p class="dim" style="margin-top:0">능력치는 SPEED와 STRENGTH 두 가지, 레벨은 끝없이 올라요. ${free ? '트레드밀·벤치프레스에서 E를 한 번씩 눌러 1세트를 채우면 경험치를 받아요.' : (SOC() ? '역사 퀴즈' : '수학 문제') + '를 맞히면 경험치를 받아요.'} 좋은 헬스장일수록 같은 훈련에 경험치를 더 많이 받아요.</p>
+        <div class="gymrow">${GYMS.map((G2, i) => `<span class="${i <= owned() ? 'own' : ''}" style="--gc:${G2.col}"><b>${G2.en.replace(' GYM', '')}</b><small>×${G2.mult}${i ? ' · ' + G2.price + '코인' : ' · 무료'}</small></span>`).join('')}</div>`}
+        <div class="statcards">${GROW.STAT_IDS.map(s => { const L = myLv(s), S2 = ST[s], where = { spd: '헬스장 · 트레드밀', str: '헬스장 · 벤치프레스' }[s]; return `<div class="scard" style="--sc:${STAT_COL[s]}"><h4>${IC(S2.icon)} ${S2.en}</h4><div class="lv">Lv.${L.lv} <small style="font-size:16px">${fmtStat(s, L.lv)} → ${fmtStat(s, L.lv + 1)}</small></div><div class="pbar"><i style="width:${Math.round(L.cur / L.need * 100)}%"></i></div><p>${S2.name} · ${S2.desc} · 다음 레벨까지 ${Math.ceil(L.need - L.cur)} XP</p><p>${where} · ${GYMS[owned()].en} ×${GYMS[owned()].mult}</p><button class="btn sm ghost" data-act="guide" data-s="${s}">${IC('map')} 길 안내</button></div>`; }).join('')}</div>`;
     } else if (k === 'help') {
-      h = `<div class="ptitle">${IC('help')} HOW TO PLAY</div><div class="keys"><kbd>W A S D</kbd><span>이동 (방향키도 돼요) · 모바일: 왼쪽 조이스틱</span><kbd>마우스</kbd><span>화면을 끌면 시점 회전 · 휠로 확대/축소 · <b>Shift</b>를 누르면 마우스로 바로 시점 조작</span><kbd>Space</kbd><span>점프 · 피라미드 계단 오르기</span><kbd>E</kbd><span>상호작용 (훈련·운동·블록 캐기·이벤트·보물상자) · 누르고 있으면 반복</span><kbd>Q</kbd><span>블록 놓기 (초록색으로 빛나는 칸에 쌓여요)</span><kbd>Esc</kbd><span>창 닫기</span></div>
-        <h3>게임 방법</h3><p>${free ? 'QUARRY에서 블록을 캐서 → PYRAMID에 쌓으면 코인을 받아요 → 코인과 운동으로 능력치를 키워 더 빨리 더 많이 쌓아요.' : 'GYM·UPGRADES·RANGE에서 문제를 맞히면 경험치 → 능력치 LEVEL UP! QUARRY에서 블록을 캐서(돌은 무한) → PYRAMID에 쌓아요.'} 피라미드는 아래층부터 순서대로 올라가요.</p>
-        <h3>능력치</h3><p>SPEED(이동 속도) · STRENGTH(최대 운반량) · BULK PICKUP(한 번에 수집) · BULK PLACE(한 번에 배치) · PLACEMENT RANGE(배치 범위)</p>
+      h = `<div class="ptitle">${IC('help')} HOW TO PLAY</div><div class="keys"><kbd>W A S D</kbd><span>이동 (방향키도 돼요) · 모바일: 왼쪽 조이스틱</span><kbd>마우스</kbd><span>화면을 끌면 시점 회전 · 휠로 확대/축소 · <b>Shift</b>를 누르면 마우스로 바로 시점 조작</span><kbd>Space</kbd><span>점프 · 피라미드 계단 오르기</span><kbd>E</kbd><span>상호작용 (블록 캐기·놓기·작업·훈련·이용권·게시판·이벤트) · 운동은 한 번씩 눌러야 해요</span><kbd>Q</kbd><span>블록 놓기 (초록색으로 빛나는 칸에 쌓여요)</span><kbd>Esc</kbd><span>창 닫기</span></div>
+        <h3>게임 방법</h3><p>QUARRY 블록 더미에서 블록을 캐서 → PYRAMID에 쌓아요. WORK YARD에서 일해 코인을 벌고 → 더 좋은 헬스장 이용권을 사서 → ${free ? '운동으로' : (SOC() ? '역사 퀴즈' : '수학 문제') + '를 풀며'} SPEED·STRENGTH를 키워요. 피라미드는 아래층부터 순서대로 올라가요.</p>
+        <h3>능력치 (레벨 제한 없음)</h3><p>SPEED: 이동 속도 · STRENGTH: 최대 운반량(레벨×${g.carry0}개) + 한 번에 캐고 놓는 블록 수(레벨만큼)</p>
+        <h3>헬스장 7등급</h3><p>${GYMS.map(G2 => `${G2.en.replace(' GYM', '')} ×${G2.mult}`).join(' · ')} — 입구 안내판에서 순서대로 이용권을 사요. 한 번 사면 계속 쓸 수 있어요.</p>
+        <h3>작업장</h3><p>A 상자를 트럭까지 · B 자재를 알맞은 통에 · C 소포를 분홍 빛기둥까지. 같은 일만 계속하면 보상이 줄고, 여러 일을 이어서 하면 연속 보너스!</p>
         ${free ? '' : '<h3>긴급 안전 점검</h3><p>몇 분마다 모두가 동시에 문제를 풀어요. 학급 정답률이 높으면 보너스, 낮으면 지진으로 위쪽 블록이 무너질 수 있어요(아래층은 안전). 무너진 블록은 RUBBLE 더미로 떨어져요.</p>'}`;
     } else if (k === 'settings') {
       const p = SND.prefs, q = load('pyr_q') || W.quality;
@@ -4329,8 +4903,9 @@ var W = (function () {
     edrot: () => { S.edFront = !S.edFront; Editor.face(!S.edFront); }, edzoom: el => Editor.zoom(+el.dataset.k),
     leave: () => { if (!confirm('정말 나갈까요? 같은 이름으로 다시 들어오면 이어서 할 수 있어요.')) return; if (S.me) NET.update(`rooms/${S.code}/players/${S.me.key}`, { online: false }).catch(() => { }); save('pyr_me', null); try { sessionStorage.removeItem('pyr_me'); } catch (e) { } location.href = location.pathname + (NET.mode === 'local' ? '?net=local' : ''); },
     drawer: el => openDrawer(el.dataset.d), closedrawer: () => { const d = $('#drawer'); if (d) d.remove(); },
-    guide: el => { const s = el.dataset.s, P = W.POS, t = { spd: [P.gym[0] - 7.5, P.gym[1], 'GYM · SPEED'], str: [P.gym[0] + 7.5, P.gym[1], 'GYM · STRENGTH'], bpu: [P.upg[0] - 7.5, P.upg[1], 'UPGRADES'], bpl: [P.upg[0] + 7.5, P.upg[1], 'UPGRADES'], rng: [P.range[0], P.range[1], 'RANGE'] }[s]; S.guide = { x: t[0], z: t[1], name: t[2] }; setTimeout(() => { S.guide = null; }, 40000); const d = $('#drawer'); if (d) d.remove(); toast('오른쪽 위 초록 화살표를 따라가요!'); },
-    buy: el => buy(el.dataset.s),
+    guide: el => { const t = W.gyms[owned()]; S.guide = { x: t.door[0], z: t.door[1], name: GYMS[owned()].en }; const d = $('#drawer'); if (d) d.remove(); toast(`${GYMS[owned()].en}까지 화살표가 안내해요`); setTimeout(() => { S.guide = null; }, 30000); },
+    bprev: () => W.viewBoard(W.boardView - 1), bnext: () => W.viewBoard(W.boardView + 1), bclose: () => W.viewBoard(-1),
+    tutnext: () => tutStep(1), tutskip: () => tutStep(99),
     setq: el => { save('pyr_q', el.dataset.v); location.reload(); },
     rankmin: () => { S.rankMin = !S.rankMin; save('pyr_rankmin', S.rankMin); S.sig.rk = null; renderHUD(); },
     closepanel: () => closePanel(), closeem: () => { const o = $('#emov'); if (o) o.remove(); }, closefinal: () => { const f = $('.final3'); if (f) f.remove(); },
@@ -4358,7 +4933,8 @@ var W = (function () {
   document.addEventListener('keydown', e => {
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') { if (e.key === 'Enter' && e.target.id === 'jcode') ACT.jcode(); if (e.key === 'Enter' && e.target.id === 'jnick') ACT.jlook(); return; }
     if (S.screen !== 'game') return;
-    if (e.key === 'Escape') { if (S.panel) closePanel(); const d = $('#drawer'); if (d) d.remove(); return; }
+    if (e.key === 'Escape') { if (W.boardView >= 0) W.viewBoard(-1); if (S.panel) closePanel(); const d = $('#drawer'); if (d) d.remove(); return; }
+    if (W.boardView >= 0 && S.screen === 'game') { const k = e.key.toLowerCase(); if (k === 'arrowleft' || k === 'a') W.viewBoard(W.boardView - 1); if (k === 'arrowright' || k === 'd') W.viewBoard(W.boardView + 1); }
     const q = curQ(); if (!q || q.st !== 'on' || !(S.panel || S.emActive)) return; let st; try { st = GM.getQ(q).stages[q.stage]; } catch (er) { return; }
     if ((st.k === 'num' || st.k === 'fill') && /^[0-9.]$/.test(e.key)) { const b = $(`.key[data-k="${e.key}"]`); if (b) b.click(); e.stopImmediatePropagation(); }
     else if (e.key === 'Backspace') { const b = $('.key[data-k="del"]'); if (b) b.click(); }
