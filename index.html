@@ -380,11 +380,13 @@ body.touch #evbarw{top:104px}body.touch .evbar span{font-size:15px}
 /* ---- 랭킹 게시판 보기 · 튜토리얼 · 헬스장 등급 ---- */
 .bview{position:absolute;left:50%;bottom:26px;transform:translateX(-50%);display:flex;gap:12px;z-index:40}
 .bview .btn{min-width:84px}
-.tut{position:absolute;left:50%;bottom:104px;transform:translateX(-50%);width:min(560px,92vw);padding:16px 18px;z-index:45;border-radius:20px}
+.tut{position:absolute;left:108px;bottom:104px;width:min(520px,calc(100vw - 130px));padding:16px 18px;z-index:45;border-radius:20px}
 .tut .tuth{display:flex;align-items:center;gap:8px;font-size:22px}.tut .tuth span{margin-left:auto;font-size:14px;opacity:.7}
 .tut p{margin:8px 0;font-size:17px;line-height:1.5}
 .gymrow{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 12px}.gymrow span{border:2px solid var(--gc);border-radius:12px;padding:4px 8px;opacity:.55;display:flex;flex-direction:column;font-size:13px}.gymrow span.own{opacity:1;background:color-mix(in srgb,var(--gc) 25%,transparent)}
 .sbox.coin.bump{animation:cbump .5s}@keyframes cbump{0%{transform:scale(1)}40%{transform:scale(1.18)}100%{transform:scale(1)}}
+.tut{pointer-events:none}.tut .btn{pointer-events:auto}
+@media (pointer:coarse){.tut{left:auto;right:12px;bottom:auto;top:290px;width:min(380px,44vw)}.tut p{font-size:15px}}
 
 </style>
 </head>
@@ -1739,7 +1741,7 @@ var SND = (function () {
 ===================================================================== */
 var GROW = (function () {
   'use strict';
-  const SPEED = 6.2; // 기본 이동 속도 (m/s)
+  const SPEED = 4.2; // 기본 이동 속도 (m/s)
   const RANGE = 6; // 피라미드 배치 거리 (고정)
   const STATS = {
     spd: { name: '스피드', en: 'SPEED', icon: 'bolt', unit: '배', machine: '트레드밀', desc: '이동 속도' },
@@ -1761,27 +1763,27 @@ var GROW = (function () {
   const applyPrices = c => { const k = (c && c.priceMul) || 1; GYMS.forEach(g => g.price = Math.round(g.base * k / 10) * 10); };
   function defaults() {
     return {
-      v: 3, // 수치 버전 (예전 설정이 남아 있으면 새 기본값으로)
-      xp0: 20, xpInc: 15, // 레벨업 필요 경험치 = xp0 + xpInc × (현재Lv-1), 레벨 상한 없음
-      spdStep: 0.12, carry0: 5, // SPEED Lv당 이동 속도 +12%, STRENGTH Lv당 운반 +5개 · 배치 +1개
-      xpBase: 3, xpFirst: 1, xpApp: 1, xpAcc: 1, xpFail: 1, // 문제 풀이 경험치 (헬스장 배율 곱함) · 기본 헬스장에서 Lv.2까지 약 5문제
+      v: 4, // 수치 버전 (예전 설정이 남아 있으면 새 기본값으로)
+      xp0: 40, xpInc: 20, // 레벨업 필요 경험치 = xp0 + xpInc × (현재Lv-1), 레벨 상한 없음
+      spdStep: 0.12, carry0: 2, // SPEED Lv당 이동 속도 +12%, STRENGTH: 처음 1개 · Lv당 운반 +2개 · 한 번에 캐기·놓기 Lv개
+      xpBase: 4, xpFirst: 0, xpApp: 1, xpAcc: 0, xpFail: 1, // 문제 풀이 경험치 (헬스장 배율 곱함) · BASIC에서 Lv.2까지 정답 10개
       emN: 10, emDur: 150, emGap: 6, emFirst: 6, emXp: 2, // 긴급 점검
       thGreat: 85, thOk: 70, thWarn: 55, collapse: 1, collapsePct: 5, bonusPct: 0.03,
       randEv: 1, evGap: 3.2,
       coinBlock: 1, // 블록 1개 놓을 때 코인
       setXp: 1, setTaps: 8, setMin: 3.5, priceMul: 1, // 자유 모드 운동 1세트: E 8번 · 최소 3.5초 → 경험치 1 × 헬스장 배율 · 이용권 가격 배율
-      payA: 8, payB: 5, payC0: 8, payCm: 0.2, comboEvery: 5, comboBonus: 10, tiredAfter: 6, rateCap: 90 // 작업장 보상
+      payW: 10, payWFirst: 2, payA: 8, payB: 5, payC0: 8, payCm: 0.2, comboEvery: 5, comboBonus: 10, tiredAfter: 6, rateCap: 90 // 작업장 보상
     };
   }
   const merge = raw => { const d = defaults(); if (!raw || raw.v !== d.v) return d; const o = Object.assign(d, raw); delete o.tables; delete o.maxLv; return o; };
   const need = (lv, c) => Math.round(c.xp0 + c.xpInc * (lv - 1));
   /* 능력치 값 */
   const speedMul = (lv, c) => +(1 + (c || defaults()).spdStep * (lv - 1)).toFixed(2);
-  const carryCap = (lv, c) => (c || defaults()).carry0 * lv;
-  const placeN = lv => lv; // 한 번에 놓기 (= 한 번에 캐기)
+  const carryCap = (lv, c) => 1 + (c || defaults()).carry0 * (lv - 1);
+  const placeN = lv => Math.max(1, Math.ceil(lv / 2)); // 한 번에 놓기 (= 한 번에 캐기): Lv1~2 1개, Lv3~4 2개 …
   const val = (k, lv, c) => k === 'spd' ? speedMul(lv, c) : carryCap(lv, c);
   const fmt = (k, lv, c) => k === 'spd' ? `이동 ×${speedMul(lv, c).toFixed(2)}` : `운반 ${carryCap(lv, c)}개 · 한 번에 ${placeN(lv)}개`;
-  const autoTarget = (n, min) => Math.max(120, Math.round(n * min * 2.4 * Math.pow(min / 25, 0.4)));
+  const autoTarget = (n, min) => Math.max(80, Math.round(n * min * 1.3 * Math.pow(min / 25, 0.4)));
   /* 한 문제의 보상 (경험치만): o = {ok, first, app, hint, recentAcc, streak, xmult} */
   function reward(o, c) {
     const bd = []; let xp = 0;
@@ -2114,11 +2116,12 @@ var GM = (function () {
     if (R.mat) { u[`${P}/inv/mat`] = inc(R.mat); u[`${P}/st/mat`] = inc(R.mat); u[`${ST}/mat`] = inc(R.mat); }
     if (R.xp && R.stat) u[`${P}/xp/${R.stat}`] = inc(R.xp);
     if (R.gold) u[`${P}/inv/gold`] = inc(R.gold);
+    if (R.coins) { u[`${P}/inv/coins`] = inc(R.coins); u[`${P}/st/earn`] = inc(R.coins); u[`${P}/st/jobW`] = inc(1); }
     if (R.rec != null) u[`${P}/st/rec`] = R.rec;
     if (R.streak != null) u[`${P}/st/sr`] = R.streak;
     if (R.acc) u[`rooms/${code}/players/${pid}/acc/${R.acc}`] = 1;
     if (R.ls) { const PP = `rooms/${code}/players/${pid}/ls`; if (R.ls.pts) u[`${PP}/sc`] = inc(R.ls.pts); if (ok) u[`${PP}/n`] = inc(1); if (R.ls.bs > R.ls.prev) { u[`${PP}/bs`] = R.ls.bs; u[`${P}/st/bs`] = R.ls.bs; } }
-    u[`${P}/log/${q.id.replace(/[.#$\[\]/]/g, '_')}`] = { ok: ok ? 1 : 0, a: q.att, h: q.hint, d: q.diff, tp: q.tpl, k: q.kind || 'train', m: R.mat || 0, x: R.xp || 0, s: Math.round((NET.now() - q.at) / 1000), t: NET.serverTS() };
+    u[`${P}/log/${q.id.replace(/[.#$\[\]/]/g, '_')}`] = { ok: ok ? 1 : 0, a: q.att, h: q.hint, d: q.diff, tp: q.tpl, k: q.kind || 'train', m: R.mat || 0, c: R.coins || 0, x: R.xp || 0, s: Math.round((NET.now() - q.at) / 1000), t: NET.serverTS() };
     u[`${ST}/tries`] = inc(1); if (ok) u[`${ST}/solves`] = inc(1);
     if (ok && extra && extra.evProg) u[`rooms/${code}/meta/ev/prog`] = inc(1);
     return u;
@@ -2943,6 +2946,9 @@ var W = (function () {
     if (av.fin) { modeA = av.fin; moveAmt = av.fin === 'walk' ? 1 : 0; }
     else if (modeA === 'walk') modeA = moveAmt > 0.05 ? 'walk' : 'idle';
     const tot = (av.c || 0) + (av.g || 0), heavy = m ? 0 : Math.max(0, Math.min(1, (tot - 8) / 30));
+    // 먼 캐릭터는 단순한 모형 1개로 (30명이 모여도 그리기 횟수 절약)
+    if (!av.isMe && av.online !== false && !av.fin && mode === 'player' && !(cam.cine && cam.cine.fin)) { const cd = Math.hypot(px - camera.position.x, pz - camera.position.z); av.far = cd > perf.lod; if (SH()) { const sh = cd < 26; if (sh !== av.shad) { av.shad = sh; av.a.meshes.forEach(o => o.castShadow = sh); } } } else av.far = false;
+    if (av.far) { av.root.visible = false; impPush(av, px, py, pz, rot); return; }
     syncHeld(av); if (av.held) av.held.visible = !m;
     Avatar.animate(av.a, { mode: modeA, speed: moveAmt, rate: Math.min(1.8, 0.8 + (av.spd - 1) * 0.4) * (1 - heavy * 0.3), carry: tot > 0 && !m, hold: !!av.j && !m, heavy }, dt, t);
     av.root.position.set(px, py, pz); av.root.rotation.y = rot; av.root.visible = av.online !== false; av.blob.visible = !(m && m.stat === 'str');
@@ -2957,11 +2963,23 @@ var W = (function () {
   }
   function popText(x, y, z, txt, color) { const s = floatText(txt, color); s.position.set(x, y, z); s.userData = { t: 0 }; scene.add(s); (shared.pops = shared.pops || []).push(s); }
   /* 블록을 머리 위로 들고 다님 (2×2씩 쌓임) */
+  /* ---- 성능: 먼 캐릭터 임포스터 · 자동 화질 조절 ---- */
+  const perf = { lod: 42, low: 0, imp: null, n: 0 };
+  function impInit() { if (perf.imp) return; const mk = (w, h, d) => { const im = new T.InstancedMesh(new T.BoxGeometry(w, h, d), lam(0xffffff), 64); im.frustumCulled = false; initColors(im, 64); im.count = 0; scene.add(im); return im; }; perf.imp = { body: mk(0.95, 1.5, 0.55), head: mk(0.8, 0.8, 0.8) }; }
+  function impPush(av, x, y, z, r) {
+    impInit(); if (perf.n >= 64) return; const M = _M(), q = new T.Quaternion().setFromAxisAngle(new T.Vector3(0, 1, 0), r), v = new T.Vector3(x, y + 0.75 + 0.3, z), s1 = new T.Vector3(1, 1, 1); let lk = av._lkc; if (!lk || lk.k !== av.lk) { let o = {}; try { o = JSON.parse(av.lk || '{}'); } catch (e) { } lk = av._lkc = { k: av.lk, top: C(o.topC || '#1E88E5'), skin: C(o.skin || '#FCD5B5') }; }
+    M.compose(v, q, s1); perf.imp.body.setMatrixAt(perf.n, M); perf.imp.body.setColorAt(perf.n, lk.top); v.set(x, y + 2.15, z); M.compose(v, q, s1); perf.imp.head.setMatrixAt(perf.n, M); perf.imp.head.setColorAt(perf.n, lk.skin); perf.n++;
+  }
+  function impFlush() { if (!perf.imp) return; [perf.imp.body, perf.imp.head].forEach(im => { im.count = perf.n; im.instanceMatrix.needsUpdate = true; if (im.instanceColor) im.instanceColor.needsUpdate = true; }); perf.n = 0; }
+  function autoPerf() { // 1초마다: 계속 느리면 해상도를 낮추고 먼 캐릭터를 더 일찍 단순화, 그래도 느리면 그림자 끄기
+    if (api.fps < 24) perf.low++; else perf.low = Math.max(0, perf.low - 1);
+    if (perf.low >= 4) { perf.low = 0; const pr = R.getPixelRatio(); if (pr > 1.01) { R.setPixelRatio(1); resize && resize(); } else if (perf.lod > 30) perf.lod = 30; else if (shared.sun && shared.sun.castShadow) { shared.sun.castShadow = false; } else if (perf.lod > 22) perf.lod = 22; }
+  }
   function drawCarry() {
     if (!carryMesh) return; const M = _M(), q = new T.Quaternion(), e = new T.Euler(), v = new T.Vector3(), sc = new T.Vector3(1, 1, 1), gold = C(0xFFD54F), sand = C(0xE2C38C);
     let idx = 0; const top = Avatar.HEIGHT + 0.35; // 60개까지 실제 블록으로 표시
     for (const pid in avatars) {
-      const av = avatars[pid]; if (!av.root.visible) continue; const total = Math.min(60, Math.max(0, (av.c || 0) + (av.g || 0) - (av.flyIn || 0))); if (!total || (av.anim === 'machine' && av.tr)) continue;
+      const av = avatars[pid]; if (!av.root.visible || av.far) continue; const total = Math.min(60, Math.max(0, (av.c || 0) + (av.g || 0) - (av.flyIn || 0))); if (!total || (av.anim === 'machine' && av.tr)) continue;
       const r = av.root.rotation.y, cs = Math.cos(r), sn = Math.sin(r), bob = av.a.body.position.y;
       for (let k = 0; k < total; k++) {
         const col = k % 2, row = Math.floor(k / 2) % 2, lvl = Math.floor(k / 4), lx = (col - 0.5) * 0.52, lz = (row - 0.5) * 0.52 + 0.05, ly = top + lvl * 0.52 + bob;
@@ -3210,7 +3228,7 @@ var W = (function () {
   }
   function doAct(a, dur) { me.act = a; me.actT = dur; me.anim = a; }
   function setMachine(m) { if (m) { me.tr = m.stat + ':' + m.idx; me.anim = 'machine'; me.x = m.x - Math.sin(m.rot) * 1.9; me.z = m.z - Math.cos(m.rot) * 1.9; me.y = m.y; me.rot = m.rot; } else { if (me.anim === 'machine') me.anim = 'idle'; me.tr = ''; } }
-  function nearestMachine(maxD) { let best = null, bd = maxD || 2.8; MACHINES.forEach(m => { const d = Math.hypot(me.x - m.x, me.z - m.z); if (d < bd) { bd = d; best = m; } }); return best; }
+  function nearestMachine(maxD) { let best = null, bd = maxD || 2.8; MACHINES.forEach(m => { if (m.off) return; const d = Math.hypot(me.x - m.x, me.z - m.z); if (d < bd) { bd = d; best = m; } }); return best; }
   function setLobby(v) { lobbyOn = !!v; if (lobbyWall) lobbyWall.visible = lobbyOn; }
 
   /* ---------------- 카메라 (장애물에 막히면 앞으로 당김) ---------------- */
@@ -3257,9 +3275,9 @@ var W = (function () {
   let fpsAcc = 0, fpsN = 0;
   function loop() {
     if (!running) return; rafId = requestAnimationFrame(loop); if (document.hidden) return;
-    const raw = clock.getDelta(), dt = Math.min(0.1, raw), t = clock.elapsedTime; fpsAcc += raw; // 느린 태블릿(10~20fps)에서도 이동 속도 유지 fpsN++; if (fpsAcc > 1) { api.fps = Math.round(fpsN / fpsAcc); fpsAcc = 0; fpsN = 0; }
+    const raw = clock.getDelta(), dt = Math.min(0.1, raw), t = clock.elapsedTime; fpsAcc += raw; fpsN++; if (fpsAcc > 1) { api.fps = Math.round(fpsN / fpsAcc); fpsAcc = 0; fpsN = 0; if (mode === 'player') autoPerf(); } // 느린 태블릿(10~20fps)에서도 이동 속도 유지
     if (dt > 0.05) { stepMe(dt / 2); stepMe(dt / 2); } else stepMe(dt); // 큰 프레임 간격은 두 번에 나눠 충돌 판정
-    for (const pid in avatars) stepAvatar(avatars[pid], dt, t);
+    for (const pid in avatars) stepAvatar(avatars[pid], dt, t); impFlush();
     drawPiles(dt); drawCarry(); stepFinale(dt); stepFlights(dt); stepParticles(dt); stepEvents(dt, t); stepRank(dt, t); stepPyrDeco(dt, t); stepGyms(dt, t); stepYard(dt, t); stepCamera(dt);
     if (SH() && shared.sun) { const fx = mode === 'player' ? me.x : 0, fz = mode === 'player' ? me.z : 0; shared.sun.position.set(fx + 70, 110, fz + 50); shared.sun.target.position.set(fx, 0, fz); }
     if (on.frame) on.frame(dt, t); R.render(scene, camera);
@@ -3541,7 +3559,7 @@ var W = (function () {
       box(hw * 2, 0.15, 0.15, lam(0x8D6E63), 0, 1.3, -hd, g); box(0.15, 0.15, hd * 2, lam(0x8D6E63), -hw, 1.3, 0, g); box(0.15, 0.15, hd * 2, lam(0x8D6E63), hw, 1.3, 0, g);
       obb(cx, cz, phi, 0, -hd, hw, 0.3, 0, 1.5); obb(cx, cz, phi, -hw, 0, 0.3, hd, 0, 1.5); obb(cx, cz, phi, hw, 0, 0.3, hd, 0, 1.5);
       [[-hw + 0.3, -hd + 0.3], [hw - 0.3, -hd + 0.3]].forEach(([x, z]) => box(0.35, 4.2, 0.35, lam(0x6D4C41), x, 2.1, z, g));
-      const aw = new T.Mesh(new T.PlaneGeometry(hw * 2, 4.5), new T.MeshLambertMaterial({ color: 0xE57373, side: T.DoubleSide })); aw.rotation.x = -Math.PI / 2 + 0.25; aw.position.set(0, 4.0, -hd + 2.0); g.add(aw);
+      const aw = new T.Mesh(new T.PlaneGeometry(hw * 2, 4.5), new T.MeshLambertMaterial({ color: 0xE57373, side: T.DoubleSide })); aw.rotation.x = -Math.PI / 2 + 0.25; aw.position.set(0, 4.0, -hd + 2.0); g.add(aw); obb(cx, cz, phi, 0, -hd + 2.0, hw + 0.3, 2.4, 3.3, 4.8); // 차양 (카메라가 뚫지 않게)
     } else {
       box(hw * 2, H, 0.4, wl, 0, H / 2 + 0.3, -hd, g); box(0.4, H, hd * 2, wl, -hw, H / 2 + 0.3, 0, g); box(0.4, H, hd * 2, wl, hw, H / 2 + 0.3, 0, g);
       box(hw * 2 + 1, 0.5, hd * 2 + 1, lam(sy.roof), 0, H + 0.55, 0, g);
@@ -3613,24 +3631,28 @@ var W = (function () {
     fence(x0, z0, wx - 4, z0); fence(wx + 4, z0, x1, z0); fence(x0, z1, x1, z1); fence(x0, z0, x0, z1); fence(x1, z0, x1, wz - 4); fence(x1, wz + 4, x1, z1);
     sign('WORK YARD', '작업장 · 일하고 코인을 벌어요', wx, z0, Math.PI, { w: 10, h: 2.4, y: 4.2, bg: '#0D47A1', acc: '#FFB300' });
     sign('WORK YARD', '작업장 입구', x1, wz, Math.PI / 2, { w: 6, h: 1.7, y: 3.4, bg: '#0D47A1', acc: '#FFB300' });
-    sign('작업 3가지', 'A 상자 운반 · B 자재 분류 · C 배송', wx - 3, z0 + 1.4, Math.PI, { w: 7.5, h: 2.2, y: 2.6, bg: '#263238', acc: '#FFB300' });
+    yard.fs = yard.fs || []; yard.fs.push(sign('작업 3가지', 'A 상자 운반 · B 자재 분류 · C 배송', wx - 3, z0 + 1.4, Math.PI, { w: 7.5, h: 2.2, y: 2.6, bg: '#263238', acc: '#FFB300' }));
+    yard.ls = sign('작업대 8곳', '작업대에서 E → 문제를 맞히면 코인!', wx - 3, z0 + 1.4, Math.PI, { w: 7.5, h: 2.2, y: 2.6, bg: '#263238', acc: '#FFB300' }); yard.ls.visible = false;
     // A: 상자 더미 → 트럭
     const [ax, az] = POS.jobA, [dx, dz] = POS.jobAd;
     box(3.4, 0.25, 3.4, lam(0x8B5A2B), ax, 0.13, az); for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) for (let k = 0; k < (i + j) % 2 + 1; k++) { const c = box(0.95, 0.95, 0.95, lam(k ? 0xA1673A : 0xB97A45), ax + (i - 1) * 1.05, 0.73 + k * 0.97, az + (j - 1) * 1.05); c.rotation.y = hashN(i * 9 + j + k) * 0.3; }
-    COLL.push([ax, az, 1.8]); sign('A 상자 가져가기', '상자를 들고 트럭까지!', ax, az - 2.6, Math.PI, { w: 4.6, h: 1.3, y: 2.7, bg: '#6D4C41', acc: '#FFE08A' });
+    COLL.push([ax, az, 1.8]); yard.fs = yard.fs || []; yard.fs.push(sign('A 상자 가져가기', '상자를 들고 트럭까지!', ax, az - 2.6, Math.PI, { w: 4.6, h: 1.3, y: 2.7, bg: '#6D4C41', acc: '#FFE08A' }));
     const tk = new T.Group(); box(3.2, 2.4, 2.6, lam(0x1976D2), 0, 1.6, 2.4, tk); box(2.4, 1.1, 2.4, lam(0x90CAF9), 0, 2.2, 3.4, tk); box(3.4, 0.35, 4.6, lam(0x455A64), 0, 0.9, -1.3, tk); box(0.2, 0.8, 4.6, lam(0x607D8B), -1.6, 1.45, -1.3, tk); box(0.2, 0.8, 4.6, lam(0x607D8B), 1.6, 1.45, -1.3, tk);
     [[-1.5, 2.4], [1.5, 2.4], [-1.5, -2.4], [1.5, -2.4]].forEach(([a, b]) => { const w = cyl(0.55, 0.55, 0.4, 14, lam(0x212121), a, 0.55, b, tk); w.rotation.z = Math.PI / 2; });
     tk.position.set(dx, 0, dz + 5.4); scene.add(tk); COLL.push([dx, dz + 4.4, 1.9], [dx, dz + 7.0, 1.9]); yard.truck = tk; yard.load = [];
     const pad = new T.Mesh(new T.PlaneGeometry(3.4, 3), basic(0xFFD600, { transparent: true, opacity: 0.55 })); pad.rotation.x = -Math.PI / 2; pad.position.set(dx, 0.06, dz); scene.add(pad); yard.pad = pad;
-    sign('A 트럭에 싣기', '노란 칸에서 E', dx + 3.2, dz, -Math.PI / 2, { w: 4, h: 1.2, y: 2.4, bg: '#1565C0', acc: '#FFE08A' });
+    yard.fs = yard.fs || []; yard.fs.push(sign('A 트럭에 싣기', '노란 칸에서 E', dx + 3.2, dz, -Math.PI / 2, { w: 4, h: 1.2, y: 2.4, bg: '#1565C0', acc: '#FFE08A' }));
     // B: 분류 통 3개
     POS.bins.forEach(([bx3, bz3], i) => { const b = new T.Group(), col = [0xE53935, 0x1E88E5, 0xFDD835][i]; box(2, 0.12, 2, lam(0x37474F), 0, 0.06, 0, b); box(2, 1.1, 0.15, lam(col), 0, 0.6, 0.95, b); box(2, 1.1, 0.15, lam(col), 0, 0.6, -0.95, b); box(0.15, 1.1, 2, lam(col), 0.95, 0.6, 0, b); box(0.15, 1.1, 2, lam(col), -0.95, 0.6, 0, b);
       const lb = canvasBoard(256, 128), sp = new T.Sprite(new T.SpriteMaterial({ map: lb.t, depthWrite: false })); sp.scale.set(2.4, 1.2, 1); sp.position.y = 2.3; b.add(sp); b.position.set(bx3, 0, bz3); scene.add(b); COLL.push([bx3, bz3, 1.1]); yard.bins.push({ b, lb, x: bx3, z: bz3, col }); });
-    sign('B 자재 분류', '흩어진 자재를 알맞은 통에!', POS.bins[0][0] - 2.8, POS.bins[0][1], Math.PI / 2, { w: 4.2, h: 1.3, y: 2.6, bg: '#2E7D32', acc: '#FFE08A' });
+    yard.fs = yard.fs || []; yard.fs.push(sign('B 자재 분류', '흩어진 자재를 알맞은 통에!', POS.bins[0][0] - 2.8, POS.bins[0][1], Math.PI / 2, { w: 4.2, h: 1.3, y: 2.6, bg: '#2E7D32', acc: '#FFE08A' }));
     // C: 배송 창구
     const [cx2, cz2] = POS.jobC; box(3.6, 1.1, 1.2, lam(0x5D4037), cx2, 0.55, cz2); box(3.8, 0.12, 1.4, lam(0x8D6E63), cx2, 1.16, cz2); box(3.6, 2.6, 0.3, lam(0x4E342E), cx2, 1.3, cz2 + 1.6);
     for (let i = 0; i < 6; i++) { const p = box(0.7, 0.5, 0.6, lam(0xC8A26B), cx2 - 1.3 + (i % 3) * 1.3, 1.5 + Math.floor(i / 3) * 0.9, cz2 + 1.25); p.rotation.y = hashN(i) * 0.3; }
-    COLL.push([cx2 - 1.2, cz2, 0.9], [cx2 + 1.2, cz2, 0.9]); sign('C 배송 창구', '소포를 받아 목적지까지!', cx2, cz2 - 1.4, Math.PI, { w: 4.4, h: 1.3, y: 2.9, bg: '#AD1457', acc: '#FFE08A', posts: false });
+    COLL.push([cx2 - 1.2, cz2, 0.9], [cx2 + 1.2, cz2, 0.9]); yard.fs = yard.fs || []; yard.fs.push(sign('C 배송 창구', '소포를 받아 목적지까지!', cx2, cz2 - 1.4, Math.PI, { w: 4.4, h: 1.3, y: 2.9, bg: '#AD1457', acc: '#FFE08A', posts: false }));
+    // 작업대 8개 (학습 모드: 문제를 맞히면 코인 · 캐릭터는 작업하는 동작)
+    yard.st = [];
+    [-42, -37.5, -33, -28.5].forEach((x0, i) => [37.2, 42.4].forEach((z0, j) => { const s2 = (i + j) % 2 ? 'bpl' : 'bpu'; addMachine(s2, 100 + i * 2 + j, x0 - POS.work[0] + wx, z0 - POS.work[1] + wz, 0xFFB300, 0, 0.05); const m = MACHINES[MACHINES.length - 1]; m.work = true; m.tier = 0; yard.st.push(m); }));
     // 목적지 표식 (C)
     const mk = new T.Group(), ring = new T.Mesh(new T.RingGeometry(2.2, 2.8, 40), basic(0xFF4FA0, { transparent: true, opacity: 0.85, side: T.DoubleSide })); ring.rotation.x = -Math.PI / 2; ring.position.y = 0.1; mk.add(ring);
     const beam = new T.Mesh(new T.CylinderGeometry(1.2, 1.2, 40, 14, 1, true), new T.MeshBasicMaterial({ color: 0xFF4FA0, transparent: true, opacity: 0.22, blending: T.AdditiveBlending, depthWrite: false, side: T.DoubleSide })); beam.position.y = 20; mk.add(beam);
@@ -3652,9 +3674,18 @@ var W = (function () {
     yard.bins.forEach((B, i) => { const g = B.lb.g; g.clearRect(0, 0, 256, 128); g.fillStyle = '#' + new T.Color(B.col).getHexString(); rrect(g, 6, 6, 244, 116, 26); g.fill(); g.lineWidth = 8; g.strokeStyle = '#fff'; rrect(g, 6, 6, 244, 116, 26); g.stroke(); g.fillStyle = i === 2 ? '#3A2A00' : '#fff'; g.font = '900 64px Jua, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(labels[i] || '', 128, 68); B.lb.t.needsUpdate = true; });
   }
   function nearBin(maxD) { let best = -1, bd = maxD || 2.6; yard.bins.forEach((B, i) => { const d = Math.hypot(me.x - B.x, me.z - B.z); if (d < bd) { bd = d; best = i; } }); return best; }
+  /* 학습 모드: 작업대 켜기 · 자유 모드: 몸으로 하는 작업 */
+  function setWorkMode(learn) { yard.learn = !!learn; (yard.fs || []).forEach(g => g.visible = !learn); if (yard.ls) yard.ls.visible = !!learn; if (yard.pad) yard.pad.visible = !learn; (yard.st || []).forEach(m => { m.group.visible = !!learn; m.off = !learn; }); }
   function setMarker(p) { if (!yard.mk) return; yard.mk.visible = !!p; if (p) yard.mk.position.set(p.x, 0, p.z); }
   function truckLoad() { if (!yard.truck) return; const n = yard.load.length; if (n >= 12) { yard.load.forEach(m => yard.truck.remove(m)); yard.load = []; } const m = box(0.9, 0.9, 0.9, lam(0xB97A45), -1 + (yard.load.length % 3) * 1.0, 1.55 + Math.floor(yard.load.length / 6) * 0.95, -2.6 + Math.floor(yard.load.length / 3) % 2 * 1.4, yard.truck); yard.load.push(m); }
-  function stepYard(dt, t) { if (yard.mk && yard.mk.visible) { yard.mkRing.scale.setScalar(1 + Math.sin(t * 4) * 0.08); yard.mk.children[1].material.opacity = 0.16 + Math.sin(t * 3) * 0.06; } if (yard.pad) yard.pad.material.opacity = 0.4 + Math.sin(t * 4) * 0.15; Object.values(yard.items).forEach((o, i) => { o.m.children[0].position.y = 0.45 + Math.abs(Math.sin(t * 2 + i)) * 0.08; }); }
+  /* 3D 안내 화살표 (튜토리얼 · 이벤트): 목적지 위에서 통통 튀는 큰 화살표 */
+  const g3d = { o: null };
+  function setGuide3D(p) {
+    if (!g3d.o) { const g = new T.Group(), mat = new T.MeshBasicMaterial({ color: 0x4FFFA0, transparent: true, opacity: 0.95, depthTest: false }); const cone = new T.Mesh(new T.ConeGeometry(1.1, 1.8, 4), mat); cone.rotation.x = Math.PI; g.add(cone); const st2 = new T.Mesh(new T.BoxGeometry(0.6, 1.6, 0.6), mat); st2.position.y = 1.6; g.add(st2); const rg = new T.Mesh(new T.RingGeometry(1.6, 2.2, 32), new T.MeshBasicMaterial({ color: 0x4FFFA0, transparent: true, opacity: 0.6, side: T.DoubleSide })); rg.rotation.x = -Math.PI / 2; g3d.ring = rg; scene.add(rg); g.renderOrder = 999; cone.renderOrder = st2.renderOrder = 999; scene.add(g); g3d.o = g; }
+    g3d.p = p; g3d.o.visible = g3d.ring.visible = !!p; if (p) { g3d.ring.position.set(p.x, (p.y0 != null ? p.y0 : heightAt(p.x, p.z)) + 0.12, p.z); }
+  }
+  function stepGuide3D(t) { if (!g3d.o || !g3d.p) return; const p = g3d.p; g3d.o.position.set(p.x, (p.y || 4) + Math.abs(Math.sin(t * 3)) * 0.9, p.z); g3d.o.rotation.y = t * 1.5; g3d.ring.scale.setScalar(1 + Math.sin(t * 4) * 0.12); }
+  function stepYard(dt, t) { stepGuide3D(t); if (yard.mk && yard.mk.visible) { yard.mkRing.scale.setScalar(1 + Math.sin(t * 4) * 0.08); yard.mk.children[1].material.opacity = 0.16 + Math.sin(t * 3) * 0.06; } if (yard.pad) yard.pad.material.opacity = 0.4 + Math.sin(t * 4) * 0.15; Object.values(yard.items).forEach((o, i) => { o.m.children[0].position.y = 0.45 + Math.abs(Math.sin(t * 2 + i)) * 0.08; }); }
   /* 손에 든 작업 물건 (다른 친구에게도 보임): j = 0 없음 · 1 상자 · 2~4 자재(빨강/파랑/노랑) · 9 소포 */
   const HELD_COL = { 1: 0xB97A45, 2: 0xE53935, 3: 0x1E88E5, 4: 0xFDD835, 9: 0xC8A26B };
   function syncHeld(av) {
@@ -3667,7 +3698,7 @@ var W = (function () {
     POS, QUARRY_R, LOBBY_R, MACHINES, me, cam, st, avatars, sfx, fps: 60, evs,
     init, resize, setPyramid, syncBuild, setHighlight, setRubble, heightAt, distToBuild, avatar, setLook, removeAvatar, updateRemote, levelFx, popText, sourceOf, burst, firework, quake, celebrate, finale, stopFinale, get finaleOn() { return fin.on; }, get finDbg() { return { stage: fin.stage, t: fin.t, climbT: fin.climbT, top: fin.top, u: (fin.top || []).map(p => avatars[p] && avatars[p].climb ? [avatars[p].fin, !!avatars[p].climb] : 'none') }; }, gatherAll, setEvents,
     setJoy, doAct, setMachine, nearestMachine, setLobby, specView, project, toggleLock,
-    setRanks, nearBoard, viewBoard, get boardView() { return rk.view; }, get boardCount() { return rk.count; }, takeBlocks, setGymOwned, setGymBoards, nearGymDoor, gyms, setYardItems, nearYardItem, setBins, nearBin, setMarker, truckLoad, piles,
+    perf, setRanks, setWorkMode, setGuide3D, nearBoard, rinfo: () => ({ calls: R.info.render.calls, tris: R.info.render.triangles, geo: R.info.memory.geometries, tex: R.info.memory.textures }), viewBoard, get boardView() { return rk.view; }, get boardCount() { return rk.count; }, takeBlocks, setGymOwned, setGymBoards, nearGymDoor, gyms, setYardItems, nearYardItem, setBins, nearBin, setMarker, truckLoad, piles,
     onAction: f => { on.action = f; }, onFinale: f => { on.finale = f; }, onFrame: f => { on.frame = f; }, onLock: f => { on.lock = f; },
     setMode: m => { if (m === mode) return; mode = m; if (m === 'player') { cam.dist = 13; cam.pitch = 0.32; cam.cine = null; } else specView(); },
     get mode() { return mode; }, get quality() { return quality; }, get running() { return running; }, get canvas() { return canvas; },
@@ -3756,7 +3787,7 @@ var W = (function () {
   function subscribe(code, withPos) {
     unsubAll(); S.code = code; S.room = undefined; S.builtOnce = false;
     S.unsub.push(NET.on(`rooms/${code}`, r => { S.room = r; try { onRoom(); } catch (e) { console.error(e); } }));
-    if (withPos) S.unsub.push(NET.on(`pos/${code}`, v => { S.pos = v || {}; try { onPos(); } catch (e) { console.error(e); } }));
+    if (withPos) S.unsub.push(NET.on(`pos/${code}`, v => { S.pos = v || {}; if (S.posT) return; S.posT = setTimeout(() => { S.posT = null; try { onPos(); } catch (e) { console.error(e); } }, 90); })); // 30명이 동시에 움직여도 최대 초당 11번만 처리
   }
   function show(name, html) { const ae = document.activeElement; if (ae && ae !== document.body && ae.blur) ae.blur(); S.screen = name; document.body.dataset.screen = name; if (S.cv && S.cv.parentNode) S.cv.parentNode.removeChild(S.cv); if (name !== 'editor') Editor.close(); app().innerHTML = html; S.sig = {}; }
   /* 한 페이지에 3D 월드는 하나 → 캔버스를 화면 사이에서 옮겨 다님 */
@@ -4119,29 +4150,33 @@ var W = (function () {
     else { const a = Math.random() * Math.PI * 2, d = Math.random() * 6; W.me.x = W.POS.spawn[0] + Math.cos(a) * d; W.me.z = W.POS.spawn[1] + 2 + Math.sin(a) * d; W.me.rot = Math.PI; }
     W.cam.yaw = 0; W.cam.pitch = 0.3; W.cam.cd = null;
     bindTouch(); SND.bgm(m.status === 'lobby' ? 'lobby' : 'desert'); onRoom(); onPos();
-    JOB.held = 0; JOB.type = null; JOB.dest = null; W.setMarker(null); newYard();
-    if (!load('pyr_tut3')) { S.tut = 0; setTimeout(() => tutStep(0), 600); }
+    JOB.held = 0; JOB.type = null; JOB.dest = null; W.setMarker(null); W.setWorkMode(!FREE()); if (FREE()) newYard(); else { W.setYardItems([]); W.setBins(['작업장', '작업장', '작업장']); }
   }
-  /* 첫 입장 튜토리얼 (월드를 둘러보는 순서) */
-  function tutSteps() {
-    const free = FREE(), lrn = SOC() ? '역사 퀴즈' : '수학 문제', P = W.POS;
+  /* 시작 튜토리얼: 선생님이 시작을 누르면 → 채석장 → 블록 1개 캐기 → 피라미드에 놓기 → 헬스장 → 마무리 */
+  const tutKey = () => `pyr_tut_${S.code}_${S.me && S.me.key}`;
+  function tutDefs() {
+    const P = W.POS, half = W.st.N * W.st.bs / 2, g0 = W.gyms[0], free = FREE(), lrn = SOC() ? '역사 퀴즈' : '수학 문제';
+    const near = () => { let b = null, bd = 1e9; W.piles.forEach(p => { const d = Math.hypot(p.x - W.me.x, p.z - W.me.z); if (d < bd) { bd = d; b = p; } }); return b; };
     return [
-      ['move', '움직이기', `<b>W A S D</b>(태블릿은 왼쪽 조이스틱)로 걸어요. Space는 점프! 화면을 끌면 둘러볼 수 있어요.`, null],
-      ['pick', '① 채석장 QUARRY', `서쪽 채석장의 <b>블록 더미 옆에서 E</b> → 블록이 머리 위로 쌓여요. 더미는 줄었다가 다시 채워져요.`, [P.quarry[0], P.quarry[1], 'QUARRY']],
-      ['pyramid', '② 피라미드 PYRAMID', `블록을 든 채 피라미드에 다가가 <b>E(또는 Q)</b> → 초록 칸에 쌓여요. 우리 반 모두의 피라미드예요!`, [0, 0, 'PYRAMID']],
-      ['coin', '③ 작업장 WORK YARD', `상자 운반 · 자재 분류 · 배송으로 <b>코인</b>을 벌어요. 직접 들고 옮겨야 돈을 받아요.`, [P.work[0], P.work[1], 'WORK YARD']],
-      ['muscle', '④ 헬스장 거리 GYM', `BASIC은 무료! 코인으로 BRONZE → … → LEGEND 이용권을 사면 훈련 효과가 커져요. ${free ? '트레드밀·벤치프레스에서 E를 한 번씩 눌러 세트를 채워요.' : '트레드밀·벤치프레스에서 ' + lrn + '를 맞히면 경험치!'} SPEED는 빨라지고 STRENGTH는 더 많이 들고 한 번에 더 많이 놓아요.`, [W.gyms[0].door[0], W.gyms[0].door[1], 'BASIC GYM']],
-      ['crown', '⑤ 랭킹 광장 LEADERBOARD', `피라미드 남쪽 광장의 큰 게시판에서 순위를 직접 봐요. 1~3위 캐릭터는 시상대에 올라가요!`, [P.rank[0], P.rank[1], 'LEADERBOARD']],
-      ['map', '길을 잃으면?', `오른쪽 위 지도의 <b>화살표</b>와 곳곳의 <b>방향 표지판</b>을 따라가요. 왼쪽 「퀘스트」에서 할 일을 다시 볼 수 있어요.`, null]
+      { ic: 'map', t: '채석장 QUARRY로 가요', b: '초록 화살표를 따라 서쪽 채석장으로! (W A S D · 태블릿은 왼쪽 조이스틱)', tg: () => ({ x: P.quarry[0], z: P.quarry[1], name: 'QUARRY', y: 6 }), ok: () => Math.hypot(W.me.x - P.quarry[0], W.me.z - P.quarry[1]) < W.QUARRY_R },
+      { ic: 'pick', t: '블록 1개 캐기', b: '블록 더미 옆에서 <b>E</b>(태블릿은 E 버튼) → 블록이 머리 위로 올라와요. 처음에는 1개만 들 수 있어요!', tg: () => { const p = near(); return { x: p.x, z: p.z, name: '블록 더미', y: 4 }; }, ok: () => ((inv().carry || 0) + (inv().gold || 0)) > 0 || S.tutPlaced },
+      { ic: 'pyramid', t: '피라미드에 블록 놓기', b: '블록을 든 채 피라미드로 가서 <b>E</b> → 초록으로 빛나는 칸에 쌓여요. 우리 반 모두의 피라미드예요!', tg: () => ({ x: 0, z: half + 2, name: 'PYRAMID', y: 3 }), ok: () => !!S.tutPlaced },
+      { ic: 'muscle', t: '헬스장 BASIC GYM으로 가요', b: '동쪽 헬스장 거리의 첫 번째 헬스장까지 가 봐요.', tg: () => ({ x: g0.door[0], z: g0.door[1], name: 'BASIC GYM', y: 4 }), ok: () => Math.hypot(W.me.x - g0.x, W.me.z - g0.z) < 9 },
+      { ic: 'star', t: '이제 강해질 차례!', b: `<b>트레드밀</b>에서 ${free ? 'E를 한 번씩 눌러 운동하면' : lrn + '를 맞히면'} SPEED가 올라 <b>더 빨리</b> 달리고, <b>벤치프레스</b>에서 ${free ? '운동하면' : '맞히면'} STRENGTH가 올라 <b>더 많이 들고 한 번에 더 많이</b> 놓을 수 있어요!<br>${free ? '작업장에서 일해' : '작업장 작업대에서 ' + lrn + '를 풀어'} <b>코인</b>을 벌면 BRONZE → … → LEGEND 헬스장 이용권을 살 수 있어요. 랭킹 광장에서 순위도 확인해요!`, tg: () => null, ok: () => false, last: true }
     ];
   }
-  function tutStep(d) {
-    const L = tutSteps(); S.tut = d === 99 ? L.length : d === 0 ? 0 : (S.tut || 0) + d; const old = $('#tut'); if (old) old.remove();
-    if (S.tut >= L.length) { save('pyr_tut3', 1); S.guide = null; return; }
-    const [ic, t, body, tgt] = L[S.tut]; S.guide = tgt ? { x: tgt[0], z: tgt[1], name: tgt[2] } : null;
-    const g3 = $('#g3'); if (!g3) return;
-    g3.insertAdjacentHTML('beforeend', `<div class="tut glass" id="tut"><div class="tuth">${IC(ic)} <b>${t}</b><span>${S.tut + 1} / ${L.length}</span></div><p>${body}</p>${tgt ? `<p class="dim">지도 화살표가 ${tgt[2]} 방향을 가리켜요</p>` : ''}<div class="row" style="justify-content:flex-end"><button class="btn sm ghost" data-act="tutskip">건너뛰기</button><button class="btn sm green" data-act="tutnext">${S.tut === L.length - 1 ? '시작!' : '다음'}</button></div></div>`);
+  function tutTick() {
+    const m = meta(); if (S.role !== 'student' || !m || m.status !== 'play' || !S.me) return;
+    if (S.tut == null) { if (load(tutKey())) return; S.tut = 0; }
+    if (S.tut < 0) return; const L = tutDefs(), d = L[S.tut]; if (!d) return tutEnd();
+    if (S.panel || S.emActive || W.boardView >= 0) { const o = $('#tut'); if (o) o.remove(); S.sig.tut = null; if (!d.last && d.ok()) { S.tut++; } return; }
+    if (!d.last && d.ok()) { S.tut++; sx.ok(); W.burst(W.me.x, W.me.y + 2, W.me.z, 24, [0x4FFFA0, 0xFFFFFF], 5); S.sig.tut = null; return tutTick(); }
+    const tg = d.tg(); S.guide = tg; const h = `<div class="tut glass" id="tut"><div class="tuth">${IC(d.ic)} <b>${d.t}</b><span>${d.last ? '튜토리얼 끝!' : `${S.tut + 1} / ${L.length - 1}`}</span></div><p>${d.b}</p><div class="row" style="justify-content:flex-end">${d.last ? '' : '<button class="btn sm ghost" data-act="tutskip">건너뛰기</button>'}${d.last ? '<button class="btn green" data-act="tutskip">게임 시작!</button>' : ''}</div></div>`;
+    if (S.sig.tut !== h || !$('#tut')) { const o = $('#tut'); if (o) o.remove(); const g3 = $('#g3'); if (g3) g3.insertAdjacentHTML('beforeend', h); S.sig.tut = h; }
   }
+  function tutEnd() { S.tut = -1; save(tutKey(), 1); S.guide = null; const o = $('#tut'); if (o) o.remove(); W.setGuide3D(null); }
+  function nearestTrainSpot(gymOnly) { let best = null, bd = 1e9; W.MACHINES.forEach(m => { if (m.off || (m.tier || 0) > owned() || (gymOnly && m.work)) return; const d = Math.hypot(m.x - W.me.x, m.z - W.me.z); if (d < bd) { bd = d; best = m; } }); return best; }
+
   function mergePriv(v) {
     const L = S.localQ; if (!L) return v;
     if (!v.q || v.q.n < L.n) { v.q = Object.assign({}, L); v.qn = Math.max(v.qn || 0, L.n); return v; }
@@ -4235,7 +4270,7 @@ var W = (function () {
   function evHow(ev, free) {
     const t = ev.type, goal = ev.goal || 0;
     if (free) return ({ meteor: ['GO', '지도의 ★ 황금 운석으로 달려가서 E → 코인 +30'], supply: ['BUILD', `블록을 피라미드에 쌓아요 · 반 전체 ${goal}개를 채우면 모두 코인 +40`], gold: ['GO', '채석장 옆 황금 바위로 가서 E → 황금 블록 2개'], oasis: ['TRAIN', '지금 헬스장에서 운동하면 경험치 1.5배!'], storm: ['WAIT', '모래 폭풍! 잠깐 느려져요. 하던 일을 계속해요'], pharaoh: ['GO', '스핑크스 앞으로 가서 E → 코인 +25 · 황금 왕관'], fest: ['BUILD', `블록을 쌓아요 · 반 전체 ${goal}개를 채우면 +1분 · 배치 2배`] })[t];
-    return ({ meteor: ['GO', '지도의 ★ 황금 운석으로 달려가서 E → 특별 문제를 맞히면 보너스 블록 8개!'], supply: ['SOLVE', `기구 앞에서 E → 문제를 맞혀요 · 정답 1개 = 1칸 · 반 전체 ${goal}개를 채우면 모두 보너스 블록 +6`], gold: ['GO', '채석장 옆 황금 바위로 가서 E → 문제를 맞히면 황금 블록 2개(1개 = 3칸)'], oasis: ['SOLVE', '지금 문제를 맞히면 경험치 1.5배!'], storm: ['WAIT', '모래 폭풍! 잠깐 느려져요. 하던 일을 계속해요'], pharaoh: ['GO', '스핑크스 앞으로 가서 E → 응용 문제를 맞히면 보너스 블록 + 황금 왕관'], fest: ['SOLVE', `기구 앞에서 문제를 맞혀요 · 반 전체 정답 ${goal}개를 채우면 +1분 · 배치 2배`] })[t];
+    return ({ meteor: ['GO', '지도의 ★ 황금 운석으로 달려가서 E → 특별 문제를 맞히면 보너스 블록 8개!'], supply: ['SOLVE', `초록 화살표가 가리키는 기구(헬스장·작업장)에서 E → 문제를 맞혀요 · 정답 1개 = 1칸 · 반 전체 ${goal}개를 채우면 모두 보너스 블록 +6`], gold: ['GO', '채석장 옆 황금 바위로 가서 E → 문제를 맞히면 황금 블록 2개(1개 = 3칸)'], oasis: ['SOLVE', '지금 헬스장에서 문제를 맞히면 경험치 1.5배! (초록 화살표)'], storm: ['WAIT', '모래 폭풍! 잠깐 느려져요. 하던 일을 계속해요'], pharaoh: ['GO', '스핑크스 앞으로 가서 E → 응용 문제를 맞히면 보너스 블록 + 황금 왕관'], fest: ['SOLVE', `초록 화살표가 가리키는 기구에서 문제를 맞혀요 · 반 전체 정답 ${goal}개를 채우면 +1분 · 배치 2배`] })[t];
   }
   function evBarHTML(m) {
     const now = NET.now(), ev = m.ev, free = FREE(); if (!ev || ev.until <= now || m.status !== 'play') return '';
@@ -4292,11 +4327,11 @@ var W = (function () {
       if (S.set && Date.now() - S.set.last > 4500) { S.set = null; S.gymM = null; W.setMachine(null); }
       if (m.status === 'ended' && m.result === 'win' && S.seen.celebrated) W.me.anim = 'dance';
       ctxT -= dt; if (ctxT <= 0) { ctxT = 0.12; computeCtx(); }
-      posT -= dt; if (posT <= 0) { posT = 0.2; sendPos(); }
+      posT -= dt; if (posT <= 0) { posT = 0.28; sendPos(); }
       mapT -= dt; if (mapT <= 0) { mapT = 0.16; drawMap(); }
       rankT -= dt; if (rankT <= 0) { rankT = 1; W.setRanks(rankBoards()); }
       gymT -= dt; if (gymT <= 0) { gymT = 0.5; GROW.applyPrices(G()); W.setGymOwned(owned()); W.setGymBoards({ coins: iv.coins || 0, owned: owned() }); }
-      placePrompts(); boardUI();
+      placePrompts(); boardUI(); if (S.tut !== -1) { S.tutT = (S.tutT || 0) - dt; if (S.tutT <= 0) { S.tutT = 0.25; tutTick(); } }
       const k = S.ctx.canPlace ? Math.min((iv.carry || 0) + (iv.gold || 0) * 3, bulkV() * (GM.buffs(m).fest ? 2 : 1)) : 0; W.setHighlight(k);
     }
     if (S.role !== 'student') { mapT -= dt; if (mapT <= 0) { mapT = 1; const f = $('#fps'); if (f) f.textContent = W.fps + 'fps'; } rankT -= dt; if (rankT <= 0 && S.room && S.room.meta) { rankT = 1.5; W.setRanks(rankBoards()); } }
@@ -4405,7 +4440,7 @@ var W = (function () {
     else if (ev && ev.type === 'pharaoh' && d(P.sphinx[0], P.sphinx[1]) < 12) { kind = 'pharaoh'; anchor = [P.sphinx[0], 9.5, P.sphinx[1]]; }
     else if (ev && ev.type === 'gold' && d(P.goldRock[0], P.goldRock[1]) < 7) { kind = 'gold'; anchor = [P.goldRock[0], 5.5, P.goldRock[1]]; }
     if (!kind) { const ch = S.room.chests || {}; const id = Object.keys(ch).find(k => !ch[k].by && d(ch[k].x, ch[k].z) < 3.8); if (id) { kind = 'chest'; info.id = id; anchor = [ch[id].x, 2.6, ch[id].z]; } }
-    if (!kind) { const j = jobCtx(d); if (j) { kind = j.kind; info = j.info || {}; anchor = j.anchor; } }
+    if (!kind && FREE()) { const j = jobCtx(d); if (j) { kind = j.kind; info = j.info || {}; anchor = j.anchor; } }
     if (!kind) { const t = W.nearGymDoor(4.4); if (t != null && t > owned()) { const G2 = W.gyms[t]; kind = 'gymbuy'; info.t = t; anchor = [G2.door[0], 4.2, G2.door[1]]; } }
     if (!kind) { const mc = W.nearestMachine(3); if (mc) { kind = 'train'; info.m = mc; anchor = [mc.x, mc.y + 3, mc.z]; } }
     if (!kind) { const b = W.nearBoard(); if (b >= 0) { kind = 'board'; info.b = b; anchor = [me.x, me.y + Avatar.HEIGHT + 1.4, me.z]; } }
@@ -4422,10 +4457,11 @@ var W = (function () {
     if (!busy && c.anchor && c.kind !== 'place') {
       const cap = capV(), free = FREE(); let k = 'E', a = '', s = '', cls = '';
       if (c.kind === 'train') {
-        const mm = c.info.m, st = mm.stat, G2 = GYMS[mm.tier || 0];
+        const mm = c.info.m, st = mm.work ? 'spd' : mm.stat, G2 = GYMS[mm.tier || 0];
         if ((mm.tier || 0) > owned()) { a = '이용권이 필요해요'; s = G2.en; cls = 'warn'; k = '!'; }
         else if (free) { const S2 = S.set && S.set.m === mm ? S.set : null, g = G(); a = S2 ? `E 계속 누르기! ${Math.min(S2.taps, g.setTaps)}/${g.setTaps}` : `${ST[st].en} 운동하기`; s = S2 ? `1세트 완료하면 +${Math.round(g.setXp * G2.mult * 10) / 10} XP` : `${ST[st].machine} · 훈련 효과 ×${G2.mult}`; if (S2) cls = 'place'; }
         else { a = `${ST[st].en} 훈련하기`; s = `${ST[st].machine} · 문제를 풀면 경험치 ×${G2.mult}`; }
+        if (mm.work) { a = '작업하기 (문제 풀기)'; s = `정답 1개 = 코인 ${G().payW}개`; cls = ''; k = 'E'; }
       }
       else if (c.kind === 'mine') { if (c.carry >= cap) { a = '더 들 수 없어요'; s = `${c.carry}/${cap} · 피라미드로!`; cls = 'warn'; k = '!'; } else { const x2 = GM.buffs(m).x2 ? 2 : 1; a = `블록 캐기 ×${Math.min(bulkV() * x2, cap - c.carry)}`; s = x2 > 1 ? '대성공 보너스: 2배로 캐요!' : `블록 더미에서 · 최대 ${cap}개`; } }
       else if (c.kind === 'gymbuy') { const t = c.info.t, G2 = GYMS[t], coins = inv().coins || 0; if (t !== owned() + 1) { a = `${G2.en} 잠김`; s = `먼저 ${GYMS[t - 1].en} 이용권`; cls = 'warn'; k = '!'; } else if (coins < G2.price) { a = `이용권 ${G2.price}코인`; s = `코인 ${G2.price - coins}개 더 필요`; cls = 'warn'; k = '!'; } else { a = `이용권 구매 ${G2.price}코인`; s = `훈련 효과 ×${G2.mult} · 영구 이용`; cls = 'place'; } }
@@ -4447,7 +4483,8 @@ var W = (function () {
   function guideTarget() {
     const iv = inv(), P = W.POS, carry = (iv.carry || 0) + (iv.gold || 0), ev = S.ctx.ev;
     if (S.guide) return S.guide;
-    if (ev && !(S.priv && (S.priv.evd || {})[ev.id]) && meta().status === 'play') { if (ev.type === 'meteor') return { x: ev.x, z: ev.z, name: '황금 운석' }; if (ev.type === 'gold') return { x: P.goldRock[0], z: P.goldRock[1], name: '황금 바위' }; if (ev.type === 'pharaoh') return { x: P.sphinx[0], z: P.sphinx[1], name: '스핑크스' }; }
+    if (ev && !ev.done && meta().status === 'play' && !S.panel && ['supply', 'fest', 'oasis'].includes(ev.type)) { if (FREE()) { if (ev.type !== 'oasis') return { x: 0, z: 0, name: 'PYRAMID' }; } const mm = nearestTrainSpot(ev.type === 'oasis'); if (mm) return { x: mm.x, z: mm.z, name: mm.work ? '작업대' : '헬스장 기구', y: mm.y + 3.4, d3: 1 }; }
+    if (ev && !(S.priv && (S.priv.evd || {})[ev.id]) && meta().status === 'play') { if (ev.type === 'meteor') return { x: ev.x, z: ev.z, name: '황금 운석', y: 6, d3: 1 }; if (ev.type === 'gold') return { x: P.goldRock[0], z: P.goldRock[1], name: '황금 바위', y: 7, d3: 1 }; if (ev.type === 'pharaoh') return { x: P.sphinx[0], z: P.sphinx[1], name: '스핑크스', y: 13, d3: 1 }; }
     if (meta().status === 'lobby') return { x: P.spawn[0], z: P.spawn[1], name: '대기 광장' };
     if (JOB.type === 'A') return { x: P.jobAd[0], z: P.jobAd[1], name: '트럭' };
     if (JOB.type === 'B') return { x: P.bins[1][0], z: P.bins[1][1], name: '분류 통' };
@@ -4472,7 +4509,7 @@ var W = (function () {
     Object.values(W.avatars).forEach(av => { if (av.isMe || !av.root.visible) return; g.fillStyle = '#fff'; g.strokeStyle = '#222'; g.lineWidth = 2; g.beginPath(); g.arc(av.root.position.x * sc, av.root.position.z * sc, 6, 0, 7); g.fill(); g.stroke(); });
     g.restore();
     g.save(); g.translate(R0, R0); g.rotate(yaw - me.rot + Math.PI); g.fillStyle = '#FF4F5E'; g.strokeStyle = '#fff'; g.lineWidth = 4; g.beginPath(); g.moveTo(0, -16); g.lineTo(12, 12); g.lineTo(0, 5); g.lineTo(-12, 12); g.closePath(); g.fill(); g.stroke(); g.restore();
-    const t = guideTarget(), dx = t.x - me.x, dz = t.z - me.z, dist = Math.hypot(dx, dz), a = Math.atan2(dx, dz), rel = -(a - (yaw + Math.PI));
+    const t = guideTarget(); W.setGuide3D((t.d3 || S.tut >= 0) && t.y && !S.panel ? { x: t.x, z: t.z, y: t.y } : null); const dx = t.x - me.x, dz = t.z - me.z, dist = Math.hypot(dx, dz), a = Math.atan2(dx, dz), rel = -(a - (yaw + Math.PI));
     const ga = $('#garrow'); if (ga) { ga.querySelector('i').style.transform = `rotate(${(rel * 180 / Math.PI).toFixed(0)}deg)`; const tx = dist < 7 ? `${t.name} 도착!` : `${t.name} ${Math.round(dist)}m`; const spn = ga.querySelector('span'); if (spn.textContent !== tx) spn.textContent = tx; }
   }
   /* ----- 랭킹 게시판 가까이 보기 ----- */
@@ -4517,7 +4554,7 @@ var W = (function () {
     try {
       const m = meta(), ev = m.ev, fest = GM.buffs(m).fest, evProg = free && ev && !ev.done && ev.until > NET.now() && (ev.type === 'supply' || ev.type === 'fest');
       const res = await GM.place(S.code, S.me.key, bulkV(), m.total, fest, { coin: G().coinBlock, evProg });
-      if (res && res.k) { for (let i = res.s; i < res.s + res.k; i++) S.plMap[i] = S.me.key; S.myPl = { s: res.s, k: res.k, t: NET.now() }; posT = 0; W.popText(W.me.x, W.me.y + Avatar.HEIGHT + 1.6, W.me.z, G().coinBlock ? `+${res.k}칸 · +${res.k * G().coinBlock}코인` : `+${res.k}칸`, '#7DFFB5'); sx.place(); }
+      if (res && res.k) { S.tutPlaced = true; for (let i = res.s; i < res.s + res.k; i++) S.plMap[i] = S.me.key; S.myPl = { s: res.s, k: res.k, t: NET.now() }; posT = 0; W.popText(W.me.x, W.me.y + Avatar.HEIGHT + 1.6, W.me.z, G().coinBlock ? `+${res.k}칸 · +${res.k * G().coinBlock}코인` : `+${res.k}칸`, '#7DFFB5'); sx.place(); }
       else if (res && !res.k) toast('피라미드가 이미 완성됐어요!');
     } catch (e) { console.warn(e); toast('네트워크가 느려요. 다시 눌러 주세요.'); }
     setTimeout(() => S.busy = false, 380);
@@ -4584,10 +4621,11 @@ var W = (function () {
   }
   function openTrain(m) {
     if (S.priv === undefined || S.cfgRaw === undefined) return toast('잠깐만요, 불러오는 중이에요');
-    S.panel = { kind: 'train', m, stat: m.stat }; S.lastStat = m.stat; S.toolOpen = false; W.setMachine(m); W.me.lock = true; sx.click();
+    const qs = m.work ? (S.lastStat || 'spd') : m.stat;
+    S.panel = { kind: 'train', m, stat: m.work ? null : m.stat, work: !!m.work }; if (!m.work) S.lastStat = m.stat; S.toolOpen = false; W.setMachine(m); W.me.lock = true; sx.click();
     const q = S.priv.q;
-    if (!q || q.rp || q.kind === 'em') issue(q && !q.rp ? q : null, null, m.stat);
-    else if (q.stat !== m.stat) { setLocalQ(Object.assign({}, q, { stat: m.stat })); NET.update(`priv/${S.code}/${S.me.key}/q`, { stat: m.stat }).catch(() => { }); }
+    if (!q || q.rp || q.kind === 'em') issue(q && !q.rp ? q : null, null, qs);
+    else if (q.stat !== qs) { setLocalQ(Object.assign({}, q, { stat: qs })); NET.update(`priv/${S.code}/${S.me.key}/q`, { stat: qs }).catch(() => { }); }
     renderPanel(true);
   }
   function openEv(kind) {
@@ -4602,10 +4640,11 @@ var W = (function () {
   function renderPanel(force) {
     if (!S.panel || S.emActive) { if (S.emActive && S.panel) closePanel(); return; }
     const q = panelQ(), c = S.cfgRaw === undefined ? null : cfg(), l = $('#layer'); if (!l) return;
-    const stat = S.panel.kind === 'train' ? S.panel.stat : null, tc = stat ? STAT_COL[stat] : '#FFC83D';
+    const stat = S.panel.kind === 'train' ? S.panel.stat : null, tc = stat ? STAT_COL[stat] : S.panel.work ? '#FFB300' : '#FFC83D';
     let box = $('#qpanel'); if (!box) { l.insertAdjacentHTML('beforeend', `<div class="term" id="qpanel" style="--tc:${tc}"><div class="termhead" id="qhead"></div><div class="termbody" id="qbody"></div></div>`); box = $('#qpanel'); force = true; }
     box.style.setProperty('--tc', tc);
     let head;
+    if (S.panel.work) { const g = G(); head = `<span class="ticon">${IC('coin')}</span><div><div class="tt">WORK YARD · 작업</div><div class="ts">문제를 맞히면 코인 +${g.payW} · 첫 시도 정답 +${g.payWFirst} · 내 코인 ${inv().coins || 0}</div></div>`; } else
     if (stat) { const L = myLv(stat); head = `<span class="ticon">${IC(ST[stat].icon)}</span><div><div class="tt">${ST[stat].en} TRAINING</div><div class="ts">${ST[stat].machine} · Lv.${L.lv} (${fmtStat(stat, L.lv)})</div></div><div class="xp"><div class="ts">${L.need ? `다음 레벨까지 ${L.need - L.cur} XP` : '최고 레벨!'}</div><div class="pbar"><i style="width:${L.need ? Math.round(L.cur / L.need * 100) : 100}%"></i></div></div><button class="btn sm red" data-act="closepanel">${IC('x')} 그만</button>`; }
     else { const E = GM.EVENTS[S.panel.evType]; head = `<span class="ticon">${IC('star')}</span><div><div class="tt">EVENT CHALLENGE</div><div class="ts">${E.name}</div></div><span class="grow"></span><button class="btn sm ghost" data-act="closepanel">${IC('x')}</button>`; }
     if (S.sig.qh !== head) { $('#qhead').innerHTML = head; S.sig.qh = head; }
@@ -4634,8 +4673,8 @@ var W = (function () {
   function failHTML(q, X) { const ans = X.stages.map((s, i) => `<div class="sol-step"><b>${X.stages.length > 1 ? (i + 1) + '단계 ' : ''}정답</b> ${dd(QE.answerText(s))}</div>`).join(''); return `<div class="qcard"><div class="qtitle" style="font-size:28px">좋은 도전이었어요!</div><div class="dim">풀이를 확인하고 다음 문제에서 꼭 성공해요. 끝까지 도전한 보상도 받아요.</div>${X.big ? `<div class="qbig">${X.big}</div>` : ''}<div>${ans}${dd(X.solution || '')}</div><div class="row" style="justify-content:center;margin-top:14px"><button class="btn green xl" data-act="failnext">${IC('check')} 이해했어요! 다음</button></div></div>`; }
   function flashHTML(fl) {
     const R = fl.R; return `<div class="qflash"><div class="in"><div class="rh ${fl.ok ? '' : 'no'}">${fl.ok ? (fl.first ? 'PERFECT!' : 'GREAT!') : 'NICE TRY!'}</div>
-      <div class="gains">${R.blk ? `<span class="gain" style="color:#FFE08A">${IC('block')}블록 +${R.blk}</span>` : ''}${R.xp ? `<span class="gain" style="color:${STAT_COL[R.stat] || '#fff'}">${IC(ST[R.stat] ? ST[R.stat].icon : 'star')}+${R.xp} XP</span>` : ''}${R.gold ? `<span class="gain" style="color:#FFD54F">${IC('block')}황금 +${R.gold}</span>` : ''}</div>
-      <div class="bdl">${R.bd.map(b => `<div><span>${esc(b[0])}</span><b>${b[1] ? '블록 +' + b[1] + ' ' : ''}${b[2] ? '+' + b[2] + ' XP' : ''}</b></div>`).join('')}</div>
+      <div class="gains">${R.blk ? `<span class="gain" style="color:#FFE08A">${IC('block')}블록 +${R.blk}</span>` : ''}${R.xp ? `<span class="gain" style="color:${STAT_COL[R.stat] || '#fff'}">${IC(ST[R.stat] ? ST[R.stat].icon : 'star')}+${R.xp} XP</span>` : ''}${R.gold ? `<span class="gain" style="color:#FFD54F">${IC('block')}황금 +${R.gold}</span>` : ''}${R.coins ? `<span class="gain" style="color:#FFC83D">${IC('coin')}코인 +${R.coins}</span>` : ''}</div>
+      <div class="bdl">${R.bd.map(b => `<div><span>${esc(b[0])}</span><b>${b[1] ? '블록 +' + b[1] + ' ' : ''}${b[2] ? '+' + b[2] + ' XP' : ''}${b[3] ? '+' + b[3] + ' 코인' : ''}</b></div>`).join('')}</div>
       ${S.flashLv && Date.now() < S.flashLv.until ? `<div class="lvupb">LEVEL UP! ${ST[S.flashLv.k].en} Lv.${S.flashLv.lv}</div>` : ''}</div></div>`;
   }
   function toolHTML(X) { return `<div class="tooldrawer"><div class="row"><b class="disp" style="font-size:20px">${IC('tool')} 시각적 계산 도구</b><span class="grow"></span><button class="btn sm ghost" data-act="tooltoggle">닫기</button></div><div id="toolbody" style="margin-top:10px">${TOOLS.toolsHTML(X.focus)}</div></div>`; }
@@ -4688,12 +4727,13 @@ var W = (function () {
       if (kind === 'ev' && ok) { const et = q.evType; R.bd = R.bd.slice(); if (et === 'meteor') { R.blk = 8; R.xp += 5; R.bd.push(['황금 운석 보너스 블록', 8, 5]); } else if (et === 'gold') { R.gold = 2; R.xp += 4; R.bd.push(['황금 블록 2개 (1개 = 3칸)', 0, 4]); } else if (et === 'pharaoh') { R.blk = 6; R.xp += 5; R.acc = 'crown'; R.bd.push(['파라오의 보물 블록 + 황금 왕관', 6, 5]); } }
     }
     R.stat = kind === 'train' ? (q.stat || S.lastStat) : (S.lastStat || 'spd'); if (!ST[R.stat]) R.stat = 'spd';
+    if (kind === 'train' && S.panel && S.panel.work) { R.xp = 0; R.coins = ok ? g.payW + (q.att === 0 ? g.payWFirst : 0) : 0; R.bd = ok ? [['작업 완료', 0, 0, g.payW]].concat(q.att === 0 ? [['첫 시도 정답', 0, 0, g.payWFirst]] : []) : []; }
     if (kind === 'train' && R.xp) { const tier = (S.panel && S.panel.m && S.panel.m.tier) || 0, G2 = GYMS[tier]; if (G2.mult > 1) { const ex = Math.round(R.xp * (G2.mult - 1)); R.xp += ex; R.bd = R.bd.concat([[`${G2.en} ×${G2.mult}`, 0, ex]]); } }
     // 학습 성취 점수 (공개 랭킹용): 난이도와 무관 · 스스로 해결 +3 · 틀린 뒤 끝까지 해결 +2 · 연속 정답 보너스(최대 +5)
     const pts = ok ? 10 + (q.att === 0 && !(q.hint > 0) ? 3 : 0) + (q.att > 0 ? 2 : 0) + Math.min(5, Math.max(0, streak - 1)) : 0;
     R.ls = { pts, bs: streak, prev: st.bs || 0 };
     // 문제 보상은 경험치만 (블록은 채석장에서 · 이벤트 보너스 블록만 예외)
-    R.mat = 0; R.bd = R.bd.map(x => [x[0].replace(/ 자재/g, ''), x === R.bd[R.bd.length - 1] && R.blk ? R.blk : 0, x[2]]).filter(x => x[1] || x[2]);
+    R.mat = 0; R.bd = R.bd.map(x => [x[0].replace(/ 자재/g, ''), x === R.bd[R.bd.length - 1] && R.blk ? R.blk : 0, x[2], x[3] || 0]).filter(x => x[1] || x[2] || x[3]);
     R.rec = rec; R.streak = streak; return R;
   }
   const evProg = () => { const ev = meta().ev; return !!(ev && !ev.done && ev.until > NET.now() && (ev.type === 'supply' || ev.type === 'fest')); };
@@ -4704,7 +4744,7 @@ var W = (function () {
     GM.enqueue({ id: q.id, code: S.code, pid: S.me.key, u });
     if (R.acc) setTimeout(() => { banner(`${IC('crown', 'huge')}<div class="big">황금 왕관 획득!</div><div class="sm">내 캐릭터가 왕관을 썼어요 · 꾸미기에서도 쓸 수 있어요</div>`, 2600, { confetti: true }); const lk = Object.assign({}, S.me.look, { hat: 'crown' }); S.me.look = lk; NET.update(`rooms/${S.code}/players/${S.me.key}`, { look: lk }).catch(() => { }); }, 600);
     S.flash = { ok, R, first: ok && q.att === 0, until: Date.now() + 2200, qid: q.id };
-    if (ok) { sx.ok(); W.levelFx && W.burst(W.me.x, W.me.y + 2, W.me.z, 30, [0x7DFFB5, 0xFFFFFF], 6); } else sx.click();
+    if (ok) { sx.ok(); W.levelFx && W.burst(W.me.x, W.me.y + 2, W.me.z, 30, [0x7DFFB5, 0xFFFFFF], 6); if (R.coins) { sx.coin(); W.truckLoad(); W.popText(W.me.x, W.me.y + Avatar.HEIGHT + 1.4, W.me.z, `+${R.coins} 코인`, '#FFC83D'); } } else sx.click();
     S.fb = null; if (kind === 'train') await issue(q, { ok, att: q.att, hint: q.hint }, S.panel.stat);
     S.busyQ = null; renderPanel(true);
     setTimeout(() => { S.sig.q = null; if (S.panel && S.panel.kind === 'ev') { closePanel(); S.evq = null; } else renderPanel(true); }, 2250);
@@ -4772,7 +4812,7 @@ var W = (function () {
       h = `<div class="ptitle">${IC('flag')} QUESTS</div>
         <div class="quest ${step === 2 ? 'now' : ''}"><span class="qn">1</span><div><b>QUARRY에서 블록 캐기</b><br><small class="dim">블록 더미 옆에서 E → 한 번에 ${bulkV()}개, 최대 ${capV()}개까지 들어요 (STRENGTH)</small></div></div>
         <div class="quest ${step === 3 ? 'now' : ''}"><span class="qn">2</span><div><b>PYRAMID에 블록 놓기</b> <small>(운반 중 ${carry})</small><br><small class="dim">피라미드 ${GROW.RANGE}m 안에서 E 또는 Q → 한 번에 ${bulkV()}개${g.coinBlock ? ` · 블록마다 ${g.coinBlock}코인` : ''}</small></div></div>
-        <div class="quest"><span class="qn">3</span><div><b>WORK YARD에서 일하기</b><br><small class="dim">A 상자 운반 · B 자재 분류${free || SOC() ? '' : '(곱셈 값이 같은 통에!)'} · C 배송 → 코인</small></div></div>
+        <div class="quest"><span class="qn">3</span><div><b>WORK YARD에서 일하기</b><br><small class="dim">${free ? 'A 상자 운반 · B 자재 분류 · C 배송 → 코인' : '작업대에서 E → ' + lrn + '를 맞히면 코인 ' + g.payW + '개 (첫 시도 +' + g.payWFirst + ')'}</small></div></div>
         <div class="quest"><span class="qn">4</span><div><b>헬스장에서 훈련하기</b> <small>(지금 ${G2.en} ×${G2.mult})</small><br><small class="dim">${free ? '트레드밀·벤치프레스에서 E를 한 번씩 눌러 세트 완료' : '트레드밀·벤치프레스에서 ' + lrn + '를 맞히면 경험치'}${nx ? ` · 다음: ${nx.en} 이용권 ${nx.price}코인 (×${nx.mult})` : ' · 최고 등급!'}</small></div></div>
         <div class="quest"><span class="qn">5</span><div><b>LEADERBOARD 광장에서 순위 보기</b><br><small class="dim">피라미드 남쪽 · 게시판 앞에서 E</small></div></div>
         ${ev ? `<div class="quest now"><span class="qn">★</span><div><b>${GM.EVENTS[ev.type].name}</b><br><small class="dim">${free ? freeEvDesc(ev.type) : GM.EVENTS[ev.type].desc}</small></div></div>` : ''}
@@ -4788,7 +4828,7 @@ var W = (function () {
         <h3>게임 방법</h3><p>QUARRY 블록 더미에서 블록을 캐서 → PYRAMID에 쌓아요. WORK YARD에서 일해 코인을 벌고 → 더 좋은 헬스장 이용권을 사서 → ${free ? '운동으로' : (SOC() ? '역사 퀴즈' : '수학 문제') + '를 풀며'} SPEED·STRENGTH를 키워요. 피라미드는 아래층부터 순서대로 올라가요.</p>
         <h3>능력치 (레벨 제한 없음)</h3><p>SPEED: 이동 속도 · STRENGTH: 최대 운반량(레벨×${g.carry0}개) + 한 번에 캐고 놓는 블록 수(레벨만큼)</p>
         <h3>헬스장 7등급</h3><p>${GYMS.map(G2 => `${G2.en.replace(' GYM', '')} ×${G2.mult}`).join(' · ')} — 입구 안내판에서 순서대로 이용권을 사요. 한 번 사면 계속 쓸 수 있어요.</p>
-        <h3>작업장</h3><p>A 상자를 트럭까지 · B 자재를 알맞은 통에 · C 소포를 분홍 빛기둥까지. 같은 일만 계속하면 보상이 줄고, 여러 일을 이어서 하면 연속 보너스!</p>
+        <h3>작업장</h3><p>${free ? 'A 상자를 트럭까지 · B 자재를 알맞은 통에 · C 소포를 분홍 빛기둥까지. 같은 일만 계속하면 보상이 줄고, 여러 일을 이어서 하면 연속 보너스!' : '작업대 앞에서 E → 문제를 맞히면 코인을 받아요. 문제를 푸는 동안 캐릭터가 열심히 일해요!'}</p>
         ${free ? '' : '<h3>긴급 안전 점검</h3><p>몇 분마다 모두가 동시에 문제를 풀어요. 학급 정답률이 높으면 보너스, 낮으면 지진으로 위쪽 블록이 무너질 수 있어요(아래층은 안전). 무너진 블록은 RUBBLE 더미로 떨어져요.</p>'}`;
     } else if (k === 'settings') {
       const p = SND.prefs, q = load('pyr_q') || W.quality;
@@ -4903,9 +4943,9 @@ var W = (function () {
     edrot: () => { S.edFront = !S.edFront; Editor.face(!S.edFront); }, edzoom: el => Editor.zoom(+el.dataset.k),
     leave: () => { if (!confirm('정말 나갈까요? 같은 이름으로 다시 들어오면 이어서 할 수 있어요.')) return; if (S.me) NET.update(`rooms/${S.code}/players/${S.me.key}`, { online: false }).catch(() => { }); save('pyr_me', null); try { sessionStorage.removeItem('pyr_me'); } catch (e) { } location.href = location.pathname + (NET.mode === 'local' ? '?net=local' : ''); },
     drawer: el => openDrawer(el.dataset.d), closedrawer: () => { const d = $('#drawer'); if (d) d.remove(); },
-    guide: el => { const t = W.gyms[owned()]; S.guide = { x: t.door[0], z: t.door[1], name: GYMS[owned()].en }; const d = $('#drawer'); if (d) d.remove(); toast(`${GYMS[owned()].en}까지 화살표가 안내해요`); setTimeout(() => { S.guide = null; }, 30000); },
+    guide: el => { const t = W.gyms[owned()]; S.guide = { x: t.door[0], z: t.door[1], name: GYMS[owned()].en, y: 5, d3: 1 }; const d = $('#drawer'); if (d) d.remove(); toast(`${GYMS[owned()].en}까지 화살표가 안내해요`); setTimeout(() => { S.guide = null; }, 30000); },
     bprev: () => W.viewBoard(W.boardView - 1), bnext: () => W.viewBoard(W.boardView + 1), bclose: () => W.viewBoard(-1),
-    tutnext: () => tutStep(1), tutskip: () => tutStep(99),
+    tutskip: () => tutEnd(),
     setq: el => { save('pyr_q', el.dataset.v); location.reload(); },
     rankmin: () => { S.rankMin = !S.rankMin; save('pyr_rankmin', S.rankMin); S.sig.rk = null; renderHUD(); },
     closepanel: () => closePanel(), closeem: () => { const o = $('#emov'); if (o) o.remove(); }, closefinal: () => { const f = $('.final3'); if (f) f.remove(); },
