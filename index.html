@@ -388,6 +388,9 @@ body.touch #evbarw{top:104px}body.touch .evbar span{font-size:15px}
 .tut{pointer-events:none}.tut .btn{pointer-events:auto}
 @media (pointer:coarse){.tut{left:auto;right:12px;bottom:auto;top:290px;width:min(380px,44vw)}.tut p{font-size:15px}}
 
+/* 이벤트 바: 7초 뒤에는 한 줄로 줄여 화면(화살표·기구)을 가리지 않게 */
+.evbar.mini{padding:6px 12px;align-items:center}.evbar.mini>.ic{width:26px;height:26px;margin:0}.evbar.mini .eb>span{display:none}.evbar.mini b{font-size:18px}.evbar.mini .pbar{margin-top:4px}
+
 </style>
 </head>
 <body>
@@ -3996,7 +3999,7 @@ var W = (function () {
     const tg = (k, label) => { const v = st[k] !== false; return `<div class="cf"><label>${label}</label><div class="seg sm"><button class="${v ? 'on' : ''}" data-act="tset" data-k="${k}" data-v="1">켬</button><button class="${!v ? 'on' : ''}" data-act="tset" data-k="${k}" data-v="0">끔</button></div></div>`; };
     return `<div class="panel"><div class="ptitle">${IC('gear')} 게임 설정 <small class="dim" style="font-family:var(--font);font-size:14px">학습 모드(${MODE_LBL[modeOf(m)]})는 방을 만들 때 확정돼요 · 아래 수치는 바로 적용</small></div>
       <div class="cfgg">${free ? tg('randEv', '랜덤 이벤트') : tg('secret', '개인별 비밀 난이도') + tg('hints', '힌트 제공') + tg('randEv', '랜덤 이벤트') + tg('collapse', '피라미드 붕괴 이벤트')}${tg('rank', '기여도 랭킹 표시')}${(st.roster || []).length ? tg('rosterOnly', '명단에 있는 학생만 입장') : ''}</div>
-      <h3>성장</h3><div class="cfgg">${num('xp0', '첫 레벨업 필요 경험치', 3, 60)}${num('xpInc', '레벨마다 추가 경험치', 0, 40)}${num('spdStep', 'SPEED Lv당 속도 증가', 0.02, 0.5, 0.01)}${num('carry0', 'STRENGTH Lv당 운반량', 1, 20)}${num('coinBlock', '블록 1개 코인', 0, 10)}${num('priceMul', '헬스장 이용권 가격 배율', 0.1, 5, 0.1)}${num('xp0', 'Lv.2까지 필요 경험치', 5, 200)}${num('xpInc', '레벨마다 늘어나는 경험치', 0, 100)}${num('payA', '작업 A 보상', 1, 50)}${num('payB', '작업 B 보상', 1, 50)}${num('payC0', '작업 C 기본 보상', 1, 50)}${free ? num('setXp', '운동 1세트 경험치', 1, 20) + num('setTaps', '1세트 E 횟수', 4, 20) : num('xpBase', '정답 기본 경험치', 1, 40) + num('xpFirst', '첫 시도 보너스', 0, 20) + num('xpApp', '응용 문제 보너스', 0, 20) + num('xpAcc', '최근 80%↑ 보너스', 0, 20) + num('xpFail', '끝까지 도전 경험치', 0, 20)}</div>
+      <h3>성장</h3><div class="cfgg">${num('xp0', '첫 레벨업 필요 경험치', 3, 60)}${num('xpInc', '레벨마다 추가 경험치', 0, 40)}${num('spdStep', 'SPEED Lv당 속도 증가', 0.02, 0.5, 0.01)}${num('carry0', 'STRENGTH Lv당 운반량', 1, 20)}${num('coinBlock', '블록 1개 코인', 0, 10)}${num('priceMul', '헬스장 이용권 가격 배율', 0.1, 5, 0.1)}${free ? '' : num('payW', '작업대 정답 1개 코인', 1, 50)}${num('payA', '작업 A 보상', 1, 50)}${num('payB', '작업 B 보상', 1, 50)}${num('payC0', '작업 C 기본 보상', 1, 50)}${free ? num('setXp', '운동 1세트 경험치', 1, 20) + num('setTaps', '1세트 E 횟수', 4, 20) : num('xpBase', '정답 기본 경험치', 1, 40) + num('xpFirst', '첫 시도 보너스', 0, 20) + num('xpApp', '응용 문제 보너스', 0, 20) + num('xpAcc', '최근 80%↑ 보너스', 0, 20) + num('xpFail', '끝까지 도전 경험치', 0, 20)}</div>
       ${free ? '' : `<h3>긴급 안전 점검</h3><div class="cfgg">${num('emN', '문제 수', 3, 20)}${num('emDur', '제한 시간(초)', 45, 400, 5)}${num('emGap', '간격(분)', 2, 20)}${num('emFirst', '첫 점검(분)', 1, 30)}${num('emXp', '정답 1개당 경험치', 0, 20)}${num('thGreat', '대성공 기준(%)', 50, 100)}${num('thOk', '성공 기준(%)', 30, 100)}${num('thWarn', '주의 기준(%)', 0, 100)}${num('collapsePct', '붕괴 규모(%)', 1, 20)}${num('bonusPct', '대성공 보너스(0~0.2)', 0, 0.2, 0.01)}</div>`}
       <h3>랜덤 이벤트</h3><div class="cfgg">${num('evGap', '간격(분)', 1, 10, 0.1)}</div>
       ${m.status === 'lobby' ? `<h3>피라미드 크기 (시작 전에만)</h3><div class="row"><input type="number" min="0" max="12000" value="${st.target || 0}" id="ttarget" style="width:140px"><button class="btn sm" data-act="ttarget">적용</button><span class="dim">지금 ${m.total}블록 (${m.N}×${m.N}) · 0 = 자동</span></div>` : ''}
@@ -4279,7 +4282,7 @@ var W = (function () {
     if (ev.done) return '';
     const [tag, how] = evHow(ev, free), left = Math.max(0, Math.ceil((ev.until - now) / 1000));
     const done = mine && ['meteor', 'gold', 'pharaoh'].includes(ev.type);
-    return `<div class="evbar ${ev.type === 'storm' ? 'warn' : ''}">${IC(ev.type === 'supply' ? 'gift' : ev.type === 'storm' ? 'alert' : 'star')}<div class="eb"><b>${E.name} <small class="t">${left}초</small></b><span>${done ? '이 이벤트 보상은 받았어요! 하던 일을 계속해요' : `<i class="tg">${{ GO: '이동', SOLVE: '문제', BUILD: '쌓기', TRAIN: '운동', WAIT: '기다림' }[tag]}</i>${how}`}</span>${ev.goal ? `<div class="pbar"><i style="width:${Math.min(100, (ev.prog || 0) / ev.goal * 100)}%"></i></div><small class="gp">반 전체 ${ev.prog || 0} / ${ev.goal}</small>` : ''}</div></div>`;
+    return `<div class="evbar ${ev.type === 'storm' ? 'warn' : ''} ${now - ev.at > 7000 ? 'mini' : ''}">${IC(ev.type === 'supply' ? 'gift' : ev.type === 'storm' ? 'alert' : 'star')}<div class="eb"><b>${E.name} <small class="t">${left}초</small></b><span>${done ? '이 이벤트 보상은 받았어요! 하던 일을 계속해요' : `<i class="tg">${{ GO: '이동', SOLVE: '문제', BUILD: '쌓기', TRAIN: '운동', WAIT: '기다림' }[tag]}</i>${how}`}</span>${ev.goal ? `<div class="pbar"><i style="width:${Math.min(100, (ev.prog || 0) / ev.goal * 100)}%"></i></div><small class="gp">반 전체 ${ev.prog || 0} / ${ev.goal}</small>` : ''}</div></div>`;
   }
   function buffChips(m, noEv) {
     const b = GM.buffs(m), now = NET.now(), out = [];
@@ -4483,7 +4486,7 @@ var W = (function () {
   function guideTarget() {
     const iv = inv(), P = W.POS, carry = (iv.carry || 0) + (iv.gold || 0), ev = S.ctx.ev;
     if (S.guide) return S.guide;
-    if (ev && !ev.done && meta().status === 'play' && !S.panel && ['supply', 'fest', 'oasis'].includes(ev.type)) { if (FREE()) { if (ev.type !== 'oasis') return { x: 0, z: 0, name: 'PYRAMID' }; } const mm = nearestTrainSpot(ev.type === 'oasis'); if (mm) return { x: mm.x, z: mm.z, name: mm.work ? '작업대' : '헬스장 기구', y: mm.y + 3.4, d3: 1 }; }
+    if (ev && !ev.done && meta().status === 'play' && !S.panel && ['supply', 'fest', 'oasis'].includes(ev.type)) { if (FREE()) { if (ev.type !== 'oasis') return { x: 0, z: 0, name: 'PYRAMID' }; } const mm = nearestTrainSpot(ev.type === 'oasis'); if (mm) return { x: mm.x, z: mm.z, name: mm.work ? '작업대' : '헬스장 기구', y: mm.y + 3.3, d3: 1 }; }
     if (ev && !(S.priv && (S.priv.evd || {})[ev.id]) && meta().status === 'play') { if (ev.type === 'meteor') return { x: ev.x, z: ev.z, name: '황금 운석', y: 6, d3: 1 }; if (ev.type === 'gold') return { x: P.goldRock[0], z: P.goldRock[1], name: '황금 바위', y: 7, d3: 1 }; if (ev.type === 'pharaoh') return { x: P.sphinx[0], z: P.sphinx[1], name: '스핑크스', y: 13, d3: 1 }; }
     if (meta().status === 'lobby') return { x: P.spawn[0], z: P.spawn[1], name: '대기 광장' };
     if (JOB.type === 'A') return { x: P.jobAd[0], z: P.jobAd[1], name: '트럭' };
