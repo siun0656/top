@@ -4007,7 +4007,7 @@ var W = (function () {
 <script>
 /* =====================================================================
    PYRAMID BUILDER : MATH CLASS – 화면 흐름 · HUD · 조작 · 실시간 동기화
-   모드: math(수학 학습) / free(없음 · 순수 건설 시뮬레이터)
+   모드: math(수학 학습) / free(상식 퀴즈 · 미니게임)
 ===================================================================== */
 (function () {
   'use strict';
@@ -4026,10 +4026,10 @@ var W = (function () {
   const FREE = () => GM.isFree(meta());
   const SOC = () => GM.isSoc(meta());
   const CREDIT = `<div class="credit"><b>개발 · 시니나</b><span>수업 활용 전용 교육용 게임이에요. 수업 밖 배포나 상업적 이용은 하지 말아 주세요.</span><span>로블록스(Roblox) 같은 블록 게임 느낌을 참고했지만 로블록스와는 관계없는 별도의 게임이에요. 로블록스 로고·그림·소리는 쓰지 않았어요. Roblox는 Roblox Corporation의 상표예요.</span></div>`;
-  const MODE_LBL = { math: 'MATH · 수학', soc: 'SOCIAL · 사회', free: 'FREE PLAY · 없음' }, MODE_COL = { math: '#4A20B0', soc: '#B4471B', free: '#0B4A6E' };
+  const MODE_LBL = { math: 'MATH · 수학', soc: 'SOCIAL · 사회', free: 'FREE PLAY · 상식 퀴즈' }, MODE_COL = { math: '#4A20B0', soc: '#B4471B', free: '#0B4A6E' };
   const modeOf = m => (m && m.settings && m.settings.mode) || 'math';
   function currName(st) {
-    if (st.mode === 'free') return 'FREE PLAY (학습 기능 없음)';
+    if (st.mode === 'free') return 'FREE PLAY (상식 퀴즈 · 미니게임)';
     if (st.mode === 'soc') { const u = SQ.UNITS.find(x => x.u === +(st.curr || {}).unit) || SQ.UNITS[0], t = u.topics.find(x => x[0] === (st.curr || {}).topic) || u.topics[0]; return 'SOCIAL · 5-2 ' + u.name + (t[0] === 'all' ? '' : ' · ' + t[1]); }
     return 'MATH · ' + (GM.CURR.find(c => c.unit === (st.curr || {}).unit) || GM.CURR[0]).name;
   }
@@ -4140,7 +4140,7 @@ var W = (function () {
       body = `<div class="modecards">
         <button class="mcard math ${isMath && !isSoc ? 'on' : ''}" data-act="setmode" data-v="math">${ART_MATH}<span class="tick">${IC('check')}</span><div class="txt"><b>MATH</b><span class="ko">MODE 1 · 수학</span><p>수학 문제를 풀어 캐릭터를 성장시키는 교육용 모드. 개인별 비밀 난이도 · 힌트 · 재도전 · 긴급 학급 점검 이벤트가 켜져요.<br>기본: 5학년 2학기 4단원 소수의 곱셈</p></div></button>
         <button class="mcard soc ${isSoc ? 'on' : ''}" data-act="setmode" data-v="soc">${ART_SOC}<span class="tick">${IC('check')}</span><div class="txt"><b>SOCIAL</b><span class="ko">MODE 2 · 사회</span><p>역사 퀴즈(선택형 · OX · 시대 순서)를 풀어 성장하는 사회 수업 모드. 비밀 난이도 · 5단계 힌트 · 긴급 학급 점검까지 모두 켜져요.<br>5학년 2학기 1·2단원 (선사 시대 ~ 개항) 199문제</p></div></button>
-        <button class="mcard free ${!isMath ? 'on' : ''}" data-act="setmode" data-v="free">${ART_FREE}<span class="tick">${IC('check')}</span><div class="txt"><b>FREE PLAY</b><span class="ko">MODE 3 · 없음</span><p>학습 기능 없이 순수하게 피라미드를 짓는 시뮬레이터. 작업장에서 코인을 벌어 더 좋은 헬스장 이용권을 사고, 운동으로 SPEED·STRENGTH를 키워요.</p></div></button>
+        <button class="mcard free ${!isMath ? 'on' : ''}" data-act="setmode" data-v="free">${ART_FREE}<span class="tick">${IC('check')}</span><div class="txt"><b>FREE PLAY</b><span class="ko">MODE 3 · 상식 퀴즈</span><p>교과 문제 대신 상식 퀴즈와 미니게임으로 즐겨요. 작업장에서는 몸으로 일해 코인을 벌고, 헬스장에서는 타이밍 미니게임으로 SPEED·STRENGTH를 키워요.</p></div></button>
       </div><div class="row" style="justify-content:flex-end;margin-top:18px"><button class="btn xl green" data-act="setnext">다음 ▶</button></div>`;
     } else {
       const auto = Math.round(GROW.autoTarget(st.n, st.minutes) * (isMath ? 1 : 1.7)), want = st.target > 0 ? st.target : auto, N = GM.sizeFor(want), tot = GM.totalOf(N);
