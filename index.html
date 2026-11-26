@@ -2651,12 +2651,12 @@ var GROW = (function () {
   const applyPrices = c => { const k = (c && c.priceMul) || 1; GYMS.forEach(g => g.price = Math.round(g.base * k / 10) * 10); };
   function defaults() {
     return {
-      v: 7, // 수치 버전 (예전 설정이 남아 있으면 새 기본값으로)
+      v: 8, // 수치 버전 (예전 설정이 남아 있으면 새 기본값으로)
       xp0: 40, xpInc: 20, // 레벨업 필요 경험치 = xp0 + xpInc × (현재Lv-1), 레벨 상한 없음
       spdStep: 0.12, carry0: 2, // SPEED Lv당 이동 속도 +12%, STRENGTH: 처음 1개 · Lv당 운반 +2개 · 한 번에 캐기·놓기 Lv개
       xpBase: 4, xpFirst: 0, xpApp: 1, xpAcc: 0, xpFail: 1, // 문제 풀이 경험치 (헬스장 배율 곱함) · BASIC에서 Lv.2까지 정답 10개
-      emN: 999, emDur: 60, emGap: 6, emFirst: 6, emXp: 2, // 긴급 점검: 1분 동안 최대한 많이
-      emUpN: 3, emUpPct: 5, emOkN: 2, emOkPct: 2, emDownN: 1, emDownPct: 5, // 1인당 평균 정답 3개↑ 피라미드 +5% · 2개↑ +2% · 1개 이하 -5%
+      emN: 10, emDur: 120, emGap: 6, emFirst: 6, emXp: 2, // 긴급 점검: 1인당 10문제 · 제한 시간 2분 (못 푼 문제는 오답)
+      emUpAcc: 80, emUpPct: 5, emOkAcc: 60, emOkPct: 2, emDownAcc: 35, emDownPct: 5, // 학급 정답률 80%↑ 피라미드 +5% · 60%↑ +2% · 35% 이하 -5%
       workLv: 0.1, // 운동 효과: 작업장 보수 × (1 + 0.1 × (SPEED Lv + STRENGTH Lv - 2))
       thGreat: 85, thOk: 70, thWarn: 55, collapse: 1, collapsePct: 5, bonusPct: 0.03,
       randEv: 1, evGap: 3.2,
@@ -2858,7 +2858,7 @@ var GM = (function () {
   }
   const emQ = (code, pid, cfg, emId, i) => listQ(code, pid, cfg, emId, i, EMQ, 'em');
   const evQ = (code, pid, cfg, evId) => listQ(code, pid, cfg, evId, 0, APPQ, 'ev');
-  const emCount = (cfg, n) => 999; // 시간 제한 방식: 문제 수 제한 없음
+  const emCount = (cfg, n) => Math.max(1, Math.min(30, +n || 10)); // 1인당 정해진 문제 수
 
   /* ---------- 5단계 힌트 (기존 그대로) ---------- */
   const strip = h => String(h || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
@@ -2934,9 +2934,9 @@ var GM = (function () {
     { k: 'warn', name: '아슬아슬', title: '피라미드는 그대로!', color: '#FFC93C' },
     { k: 'bad', name: '위기 발생', title: '지진 발생! 피라미드 일부 붕괴!', color: '#FF5A6E' }
   ];
-  /* 1인당 평균 정답 개수로 결과 결정 */
-  const tierOf = (avg, g) => avg >= g.emUpN ? 0 : avg >= g.emOkN ? 1 : avg <= g.emDownN ? 3 : 2;
-  const tierDesc = (t, g, on) => [[`피라미드 +${g.emUpPct}% 쑥!`, '60초 동안 블록 2배로 캐기 · 스피드 보너스'], [`피라미드 +${g.emOkPct}% 올라가요`], ['피라미드는 그대로예요', `다음엔 평균 ${g.emOkN}개 이상 도전!`], [on ? `위쪽 블록 최대 ${g.emDownPct}% 붕괴` : '붕괴 꺼짐 · 모래 폭풍', '무너진 블록은 채석장으로 → 다시 옮겨 복구']][t];
+  /* 학급 정답률(%)로 결과 결정 · 못 푼 문제는 오답 */
+  const tierOf = (acc, g) => acc >= g.emUpAcc ? 0 : acc >= g.emOkAcc ? 1 : acc <= g.emDownAcc ? 3 : 2;
+  const tierDesc = (t, g, on) => [[`피라미드 +${g.emUpPct}% 쑥!`, '60초 동안 블록 2배로 캐기 · 스피드 보너스'], [`피라미드 +${g.emOkPct}% 올라가요`], ['피라미드는 그대로예요', `다음엔 정답률 ${g.emOkAcc}% 이상 도전!`], [on ? `위쪽 블록 최대 ${g.emDownPct}% 붕괴` : '붕괴 꺼짐 · 모래 폭풍', '무너진 블록은 채석장으로 → 다시 옮겨 복구']][t];
   /* 현재 버프 */
   function buffs(meta, now) {
     now = now || NET.now(); const b = meta && meta.buff || {}, ev = meta && meta.ev && meta.ev.until > now ? meta.ev : null;
@@ -3107,39 +3107,39 @@ var GM = (function () {
     if (r.committed) await news(code, '🚨 피라미드 긴급 안전 점검! 모든 건설자는 문제에 도전하세요!', 'em');
     return r.committed;
   }
-  /* 1인당 평균 정답 개수 (점검 시작 때 접속한 학생 + 참여한 학생 모두 포함) */
+  /* 학급 정답률 = 맞힌 문제 수 ÷ (학생 수 × 1인당 문제 수) · 점검 시작 때 접속한 학생 모두 포함, 못 푼 문제는 오답 */
   function emAccuracy(em, recs) {
-    const ids = new Set(Object.keys(em.who || {}).concat(Object.keys(recs || {})));
-    let sum = 0, cnt = 0, done = 0;
-    ids.forEach(pid => { const r = (recs || {})[pid]; sum += r ? (r.ok || 0) : 0; cnt++; if (r && r.done > 0) done++; });
-    const avg = cnt ? Math.round(sum / cnt * 10) / 10 : 0;
-    return { acc: avg, avg, cnt, done };
+    const ids = new Set(Object.keys(em.who || {}).concat(Object.keys(recs || {}))), n = Math.max(1, Math.min(30, +em.n || 10));
+    let ok = 0, tot = 0, cnt = 0, done = 0, solved = 0;
+    ids.forEach(pid => { const r = (recs || {})[pid], a = r && r.a ? Math.min(+r.a, 30) : n; ok += r ? Math.min(r.ok || 0, a) : 0; tot += a; solved += r ? Math.min(r.done || 0, a) : 0; cnt++; if (r && (r.done || 0) >= a) done++; });
+    const acc = tot ? Math.round(ok / tot * 100) : 0;
+    return { acc, avg: Math.round(ok / Math.max(1, cnt) * 10) / 10, cnt, done, solved, tot };
   }
   async function resolveEmergency(room, recs) {
     const m = room.meta, code = m.code, em = m.em, g = GROW.merge(m.settings.grow), now = NET.now();
-    const A = emAccuracy(em, recs), tier = tierOf(A.avg, g);
-    const res = { acc: A.avg, avg: A.avg, tier, cnt: A.cnt, at: now };
+    const A = emAccuracy(em, recs), tier = tierOf(A.acc, g);
+    const res = { acc: A.acc, avg: A.avg, tier, cnt: A.cnt, at: now };
     const r = await NET.tx(`rooms/${code}/meta/em`, e => { if (!e || e.ph !== 'on' || e.id !== em.id) return undefined; e.ph = 'res'; e.res = res; return e; });
     if (!r.committed) return;
     const u = {}, gap = g.emGap * 60000;
     u[`rooms/${code}/meta/nextEmAt`] = now + gap;
-    u[`rooms/${code}/meta/emHist/${em.id}`] = { acc: A.avg, avg: A.avg, tier, at: now };
+    u[`rooms/${code}/meta/emHist/${em.id}`] = { acc: A.acc, avg: A.avg, tier, at: now };
     const lay = layout(m.N);
     const up = async pct => { const k = Math.max(1, Math.round(m.total * pct / 100)); let got = 0; await NET.tx(`rooms/${code}/build/n`, n => { n = n || 0; got = Math.min(m.total, n + k) - n; return n + got; }); return got; };
     if (tier === 0) {
       u[`rooms/${code}/meta/buff/x2`] = now + 60000; u[`rooms/${code}/meta/buff/spd`] = now + 60000;
       await NET.update('', u); const got = await up(g.emUpPct);
-      await news(code, `🌟 긴급 점검 대성공! (1인당 평균 ${A.avg}개) 피라미드 +${got}블록 · 60초 블록 2배!`, 'em');
+      await news(code, `🌟 긴급 점검 대성공! (학급 정답률 ${A.acc}%) 피라미드 +${got}블록 · 60초 블록 2배!`, 'em');
     } else if (tier === 1) {
       await NET.update('', u); const got = await up(g.emOkPct);
-      await news(code, `✅ 긴급 점검 성공! (1인당 평균 ${A.avg}개) 피라미드 +${got}블록!`, 'em');
+      await news(code, `✅ 긴급 점검 성공! (학급 정답률 ${A.acc}%) 피라미드 +${got}블록!`, 'em');
     } else if (tier === 2) {
       await NET.update('', u);
-      await news(code, `⚠️ 아슬아슬! (1인당 평균 ${A.avg}개) 피라미드는 그대로예요. 다음 점검은 평균 ${g.emOkN}개 이상!`, 'em');
+      await news(code, `⚠️ 아슬아슬! (학급 정답률 ${A.acc}%) 피라미드는 그대로예요. 다음 점검은 정답률 ${g.emOkAcc}% 이상!`, 'em');
     } else if (!m.settings.collapse || !g.collapse) {
       u[`rooms/${code}/meta/buff/storm`] = now + 45000;
       await NET.update('', u);
-      await news(code, `⚠️ 위기! (1인당 평균 ${A.avg}개) 모래 폭풍이 불어와요. 다음 점검을 준비해요!`, 'em');
+      await news(code, `⚠️ 위기! (학급 정답률 ${A.acc}%) 모래 폭풍이 불어와요. 다음 점검을 준비해요!`, 'em');
     } else {
       await NET.update('', u);
       let from = 0, to = 0;
@@ -3149,7 +3149,7 @@ var GM = (function () {
       if (lost) { u2[`rooms/${code}/build/rub`] = NET.inc(lost); const gs = (room.build && room.build.gs) || {}; Object.keys(gs).forEach(s => { if (+s >= from) u2[`rooms/${code}/build/gs/${s}`] = null; }); }
       if (!lost) u2[`rooms/${code}/meta/buff/storm`] = now + 30000;
       await NET.update('', u2);
-      await news(code, lost ? `💥 지진 발생! (1인당 평균 ${A.avg}개) 위쪽 블록 ${lost}개가 무너져 채석장으로 굴러갔어요. 다시 옮겨 복구해요!` : `💥 지진 발생! (1인당 평균 ${A.avg}개) 튼튼한 아래층 덕분에 무너지지는 않았어요!`, 'em');
+      await news(code, lost ? `💥 지진 발생! (학급 정답률 ${A.acc}%) 위쪽 블록 ${lost}개가 무너져 채석장으로 굴러갔어요. 다시 옮겨 복구해요!` : `💥 지진 발생! (학급 정답률 ${A.acc}%) 튼튼한 아래층 덕분에 무너지지는 않았어요!`, 'em');
     }
   }
   async function fireEvent(room, type) {
@@ -4776,8 +4776,8 @@ var W = (function () {
           ${common}
           <div class="panel"><div class="ptitle">${IC('alert')} 긴급 안전 점검 (학급 전체)</div>
             <div class="field"><label>첫 점검 / 이후 간격</label><div class="row">${stepper('emFirst', 2, 20, '분 후', 'g')}${stepper('emGap', 3, 15, '분 간격', 'g')}</div></div>
-            <div class="field"><label>제한 시간 (그동안 최대한 많이)</label><div class="row">${stepper('emDur', 30, 180, '초', 'g', 15)}</div></div>
-            <div class="field"><label>피라미드 붕괴 (1인당 평균 ${g.emDownN}개 이하)</label>${tog('collapse', '켜기', '끄기 (모래 폭풍만)')}</div></div>
+            <div class="field"><label>1인당 문제 수 / 제한 시간 (못 푼 문제는 오답)</label><div class="row">${stepper('emN', 3, 20, '문제', 'g')}${stepper('emDur', 60, 300, '초', 'g', 15)}</div></div>
+            <div class="field"><label>피라미드 붕괴 (학급 정답률 ${g.emDownAcc}% 이하)</label>${tog('collapse', '켜기', '끄기 (모래 폭풍만)')}</div></div>
           ${ev}</div>`;
       } else {
         body = `<div class="setgrid">${common}
@@ -4787,8 +4787,8 @@ var W = (function () {
             <div class="field"><label>운동 1세트 경험치 (× 헬스장 배율)</label>${stepper('setXp', 1, 10, 'XP', 'g')}</div></div>
           <div class="panel"><div class="ptitle">${IC('alert')} 긴급 안전 점검 · 상식 퀴즈</div>
             <div class="field"><label>첫 점검 / 이후 간격</label><div class="row">${stepper('emFirst', 2, 20, '분 후', 'g')}${stepper('emGap', 3, 15, '분 간격', 'g')}</div></div>
-            <div class="field"><label>제한 시간 (그동안 상식 퀴즈를 최대한 많이)</label><div class="row">${stepper('emDur', 30, 180, '초', 'g', 15)}</div></div>
-            <div class="field"><label>피라미드 붕괴 (1인당 평균 ${g.emDownN}개 이하)</label>${tog('collapse', '켜기', '끄기 (모래 폭풍만)')}</div></div>
+            <div class="field"><label>1인당 상식 퀴즈 수 / 제한 시간 (못 푼 문제는 오답)</label><div class="row">${stepper('emN', 3, 20, '문제', 'g')}${stepper('emDur', 60, 300, '초', 'g', 15)}</div></div>
+            <div class="field"><label>피라미드 붕괴 (학급 정답률 ${g.emDownAcc}% 이하)</label>${tog('collapse', '켜기', '끄기 (모래 폭풍만)')}</div></div>
           ${ev}</div>`;
       }
       body += `<div class="row" style="justify-content:space-between;margin-top:18px"><button class="btn ghost" data-act="setback">◀ 모드 다시 고르기</button><button class="btn xl green" data-act="create">${IC('hammer')} 게임방 만들기</button></div>`;
@@ -4863,9 +4863,9 @@ var W = (function () {
     const pct = Math.floor((b.n || 0) / m.total * 100), em = m.em, ev = m.ev && m.ev.until > now ? m.ev : null;
     let emPanel = '';
     {
-      const emBox = em && em.ph === 'on' ? `<div class="wrongbox" style="animation:none">${IC('alert')}<div><b>긴급 점검 진행 중</b> · ${cd(em.until)} 남음 · 1인당 평균 정답 ${em.prog && em.prog.avg != null ? em.prog.avg : 0}개 (${em.prog ? em.prog.total : '-'}명)</div></div>` : `<div class="okbox">${m.status === 'play' ? (m.nextEmAt ? `다음 긴급 점검: <b>${cd(m.nextEmAt)}</b> 후` : '긴급 점검 대기') : '일시정지 중'}${em && em.res ? ` · 지난 결과 ${em.res.acc}% (${GM.EM_TIERS[em.res.tier].name})` : ''}</div>`;
-      const hist = Object.values(m.emHist || {}).sort((a, c) => a.at - c.at).map((h, i) => `<span style="background:${GM.EM_TIERS[h.tier].color}">${i + 1}차 평균 ${h.avg != null ? h.avg : h.acc}개 ${GM.EM_TIERS[h.tier].name}</span>`).join('');
-      emPanel = `<div class="panel" style="margin-bottom:10px"><div class="ptitle">${IC('alert')} 긴급 안전 점검</div>${emBox}<div class="row" style="margin-top:8px"><button class="btn sm red" data-act="temnow" ${m.status !== 'play' || (em && em.ph === 'on') ? 'disabled' : ''}>🚨 지금 실행</button><span class="emhist">${hist}</span></div><p class="dim" style="font-size:13px;margin:6px 0 0">${g.emDur}초 동안 최대한 많이 · 1인당 평균 정답 ${g.emUpN}개↑ 피라미드 +${g.emUpPct}% · ${g.emOkN}개↑ +${g.emOkPct}% · ${g.emDownN}개 이하 ${m.settings.collapse && g.collapse ? `-${g.emDownPct}% 붕괴` : '모래 폭풍(붕괴 꺼짐)'}</p></div>`;
+      const emBox = em && em.ph === 'on' ? `<div class="wrongbox" style="animation:none">${IC('alert')}<div><b>긴급 점검 진행 중</b> · ${cd(em.until)} 남음 · 학급 정답률 ${em.prog && em.prog.acc != null ? em.prog.acc : 0}% · 푼 문제 ${em.prog && em.prog.solved != null ? em.prog.solved : 0}/${em.prog && em.prog.tot != null ? em.prog.tot : 0} (${em.prog ? em.prog.total : '-'}명)</div></div>` : `<div class="okbox">${m.status === 'play' ? (m.nextEmAt ? `다음 긴급 점검: <b>${cd(m.nextEmAt)}</b> 후` : '긴급 점검 대기') : '일시정지 중'}${em && em.res ? ` · 지난 결과 ${em.res.acc}% (${GM.EM_TIERS[em.res.tier].name})` : ''}</div>`;
+      const hist = Object.values(m.emHist || {}).sort((a, c) => a.at - c.at).map((h, i) => `<span style="background:${GM.EM_TIERS[h.tier].color}">${i + 1}차 정답률 ${h.acc}% ${GM.EM_TIERS[h.tier].name}</span>`).join('');
+      emPanel = `<div class="panel" style="margin-bottom:10px"><div class="ptitle">${IC('alert')} 긴급 안전 점검</div>${emBox}<div class="row" style="margin-top:8px"><button class="btn sm red" data-act="temnow" ${m.status !== 'play' || (em && em.ph === 'on') ? 'disabled' : ''}>🚨 지금 실행</button><span class="emhist">${hist}</span></div><p class="dim" style="font-size:13px;margin:6px 0 0">${g.emDur}초 동안 최대한 많이 · 1인당 ${g.emN}문제 · ${g.emDur}초 · 학급 정답률 ${g.emUpAcc}%↑ 피라미드 +${g.emUpPct}% · ${g.emOkAcc}%↑ +${g.emOkPct}% · ${g.emDownAcc}% 이하 ${m.settings.collapse && g.collapse ? `-${g.emDownPct}% 붕괴` : '모래 폭풍(붕괴 꺼짐)'}</p></div>`;
     }
     return `<div class="kpis"><div class="kpi"><small>건설 진행률</small><b>${pct}%</b><div class="pbar"><i style="width:${pct}%"></i></div></div><div class="kpi"><small>완성 블록</small><b>${b.n || 0}</b><small>/ ${m.total}</small></div>
         ${free ? `<div class="kpi"><small>전체 코인 획득</small><b>${s.coins || 0}</b></div>` : `<div class="kpi"><small>총 해결 문제</small><b>${s.solves || 0}</b><small>도전 ${s.tries || 0}</small></div><div class="kpi"><small>학급 정답률</small><b>${classAcc(r)}%</b></div>`}
@@ -4908,7 +4908,7 @@ var W = (function () {
     return `<div class="panel"><div class="ptitle">${IC('gear')} 게임 설정 <small class="dim" style="font-family:var(--font);font-size:14px">학습 모드(${MODE_LBL[modeOf(m)]})는 방을 만들 때 확정돼요 · 아래 수치는 바로 적용</small></div>
       <div class="cfgg">${free ? tg('randEv', '랜덤 이벤트') + tg('collapse', '피라미드 붕괴(긴급 점검 실패 시)') : tg('secret', '개인별 비밀 난이도') + tg('hints', '힌트 제공') + tg('randEv', '랜덤 이벤트') + tg('collapse', '피라미드 붕괴 이벤트')}${tg('rank', '기여도 랭킹 표시')}${(st.roster || []).length ? tg('rosterOnly', '명단에 있는 학생만 입장') : ''}</div>
       <h3>성장</h3><div class="cfgg">${num('xp0', '첫 레벨업 필요 경험치', 3, 60)}${num('xpInc', '레벨마다 추가 경험치', 0, 40)}${num('spdStep', 'SPEED Lv당 속도 증가', 0.02, 0.5, 0.01)}${num('carry0', 'STRENGTH Lv당 운반량', 1, 20)}${num('coinBlock', '블록 1개 코인', 0, 10)}${num('priceMul', '헬스장 이용권 가격 배율', 0.1, 5, 0.1)}${free ? '' : num('payW', '작업대 정답 1개 코인', 1, 50)}${num('workLv', '운동 효과: 레벨당 작업 보수 증가', 0, 0.5, 0.01)}${num('payA', '작업 A 보상', 1, 50)}${num('payB', '작업 B 보상', 1, 50)}${num('payC0', '작업 C 기본 보상', 1, 50)}${free ? num('setXp', '운동 1세트 경험치', 1, 20) + num('setTaps', '1세트 성공 횟수', 4, 20) : num('xpBase', '정답 기본 경험치', 1, 40) + num('xpFirst', '첫 시도 보너스', 0, 20) + num('xpApp', '응용 문제 보너스', 0, 20) + num('xpAcc', '최근 80%↑ 보너스', 0, 20) + num('xpFail', '끝까지 도전 경험치', 0, 20)}</div>
-      ${`<h3>긴급 안전 점검${free ? ' · 상식 퀴즈' : ''}</h3><div class="cfgg">${num('emDur', '제한 시간(초)', 30, 300, 5)}${num('emGap', '간격(분)', 2, 20)}${num('emFirst', '첫 점검(분)', 1, 30)}${num('emXp', '정답 1개당 경험치', 0, 20)}${num('emUpN', '대성공: 평균 정답 몇 개 이상', 1, 20, 0.5)}${num('emUpPct', '대성공: 피라미드 +%', 0, 30)}${num('emOkN', '성공: 평균 몇 개 이상', 0.5, 20, 0.5)}${num('emOkPct', '성공: 피라미드 +%', 0, 30)}${num('emDownN', '위기: 평균 몇 개 이하', 0, 10, 0.5)}${num('emDownPct', '위기: 붕괴 %', 0, 30)}</div>`}
+      ${`<h3>긴급 안전 점검${free ? ' · 상식 퀴즈' : ''}</h3><div class="cfgg">${num('emDur', '제한 시간(초)', 30, 300, 5)}${num('emGap', '간격(분)', 2, 20)}${num('emFirst', '첫 점검(분)', 1, 30)}${num('emXp', '정답 1개당 경험치', 0, 20)}${num('emN', '1인당 문제 수', 3, 20)}${num('emUpAcc', '대성공: 정답률 몇 % 이상', 50, 100, 5)}${num('emUpPct', '대성공: 피라미드 +%', 0, 30)}${num('emOkAcc', '성공: 정답률 몇 % 이상', 30, 95, 5)}${num('emOkPct', '성공: 피라미드 +%', 0, 30)}${num('emDownAcc', '위기: 정답률 몇 % 이하', 0, 60, 5)}${num('emDownPct', '위기: 붕괴 %', 0, 30)}</div>`}
       <h3>랜덤 이벤트</h3><div class="cfgg">${num('evGap', '간격(분)', 1, 10, 0.1)}</div>
       ${m.status === 'lobby' ? `<h3>피라미드 크기 (시작 전에만)</h3><div class="row"><input type="number" min="0" max="12000" value="${st.target || 0}" id="ttarget" style="width:140px"><button class="btn sm" data-act="ttarget">적용</button><span class="dim">지금 ${m.total}블록 (${m.N}×${m.N}) · 0 = 자동</span></div>` : ''}
       <div class="row" style="margin-top:14px"><button class="btn green" data-act="tsavecfg">${IC('save')} 저장</button><button class="btn sm ghost" data-act="tresetcfg">기본값으로</button></div></div>`;
@@ -4931,7 +4931,7 @@ var W = (function () {
       if (left <= 0) { await endGame('time'); return; }
       const em = m.em;
       {
-        if (em && em.ph === 'on') { const recs = S.emrAll[em.id] || {}, A = GM.emAccuracy(em, recs); if (!em.prog || em.prog.avg !== A.avg || em.prog.total !== A.cnt) await NET.update(`rooms/${m.code}/meta/em/prog`, { done: A.done, total: A.cnt, avg: A.avg }); if (now >= em.until) await GM.resolveEmergency(r, recs); }
+        if (em && em.ph === 'on') { const recs = S.emrAll[em.id] || {}, A = GM.emAccuracy(em, recs); if (!em.prog || em.prog.acc !== A.acc || em.prog.solved !== A.solved || em.prog.total !== A.cnt) await NET.update(`rooms/${m.code}/meta/em/prog`, { done: A.done, total: A.cnt, avg: A.avg, acc: A.acc, solved: A.solved, tot: A.tot }); if (now >= em.until || (A.cnt > 0 && A.done >= A.cnt && now - em.at > 5000)) await GM.resolveEmergency(r, recs); }
         else if (m.nextEmAt && now >= m.nextEmAt && left > g.emDur * 1000 + 15000 && !(m.ev && m.ev.until > now && !m.ev.done)) await GM.startEmergency(r);
       }
       const ev = m.ev;
@@ -5731,7 +5731,7 @@ var W = (function () {
   }
 
   /* ================= 수학 모드: 긴급 안전 점검 ================= */
-  const emAttempts = () => cfg().p === 0 ? 2 : 1;
+  const emAttempts = () => { if (cfg().p !== 0) return 1; try { const st = GM.getQ(S.emq).stages[S.emq.stage || 0]; return st && st.k === 'mc' && st.opts && st.opts.length <= 2 ? 1 : 2; } catch (e) { return 1; } };
   function handleEm() {
     if (!S.priv) return; const m = meta(), em = m.em, now = NET.now();
     if (em && em.ph === 'on' && now < em.until + 2000 && m.status === 'play') {
@@ -5740,7 +5740,7 @@ var W = (function () {
         const n = GM.emCount(cfg(), em.n), pe = S.priv.em && S.priv.em.id === em.id ? S.priv.em : { id: em.id, i: 0, ok: 0, r: '' };
         S.emSt = Object.assign({ a: n }, pe); S.emq = null;
         if (!S.priv.em || S.priv.em.id !== em.id) NET.update('', { [`${PQ()}/em`]: S.emSt, [`emr/${S.code}/${em.id}/${S.me.key}`]: { a: n, ok: 0, done: 0 } }).catch(() => { });
-        if (now - em.at < 10000) { sx.alarm(); SND.bgm('alarm'); const d = document.createElement('div'); d.className = 'alertban'; d.innerHTML = `<div class="in"><div class="big">🚨 긴급 상황!</div><div class="sm">피라미드의 안정성이 위험합니다!<br><b>${G().emDur}초 동안 ${FREE() ? '상식 퀴즈를 ' : ''}최대한 많이 맞혀요!</b><br>1인당 평균 ${G().emUpN}개↑ 피라미드 +${G().emUpPct}% · ${G().emDownN}개 이하면 무너져요</div></div>`; document.body.appendChild(d); setTimeout(() => d.remove(), 2600); W.quake(1.2); }
+        if (now - em.at < 10000) { sx.alarm(); SND.bgm('alarm'); const d = document.createElement('div'); d.className = 'alertban'; d.innerHTML = `<div class="in"><div class="big">🚨 긴급 상황!</div><div class="sm">피라미드의 안정성이 위험합니다!<br><b>${G().emN}문제를 ${G().emDur}초 안에! ${FREE() ? '상식 퀴즈 · ' : ''}학급 정답률로 결과가 정해져요</b><br>1인당 정답률 ${G().emUpAcc}%↑ 피라미드 +${G().emUpPct}% · ${G().emDownAcc}% 이하면 무너져요</div></div>`; document.body.appendChild(d); setTimeout(() => d.remove(), 2600); W.quake(1.2); }
       }
     } else if (S.emActive) { const id = S.emActive; S.emActive = null; S.emq = null; SND.bgm('desert'); if (em && em.id === id && em.res) showTier(em.res); else { const ov = $('#emov'); if (ov) ov.remove(); } }
     else if (em && em.res && !S.seen['tier:' + em.id] && now - em.res.at < 15000 && S.seen.emPrimed) showTier(em.res);
@@ -5748,7 +5748,7 @@ var W = (function () {
   }
   function showTier(res) {
     const Tn = GM.EM_TIERS[res.tier]; let ov = $('#emov'); if (!ov) { $('#layer').insertAdjacentHTML('beforeend', '<div class="emov" id="emov"></div>'); ov = $('#emov'); }
-    ov.innerHTML = `<div class="embody" style="align-items:center"><div><div class="tierbox" style="--tc:${Tn.color}"><div class="dim">긴급 안전 점검 결과 · 1인당 평균 정답</div><div class="acc">${res.avg != null ? res.avg : res.acc}개</div><div class="tn">${Tn.name}</div><div style="font-size:22px;font-weight:700">${Tn.title}</div><ul>${GM.tierDesc(res.tier, G(), meta().settings.collapse !== false && G().collapse).map(d => `<li>✦ ${d}</li>`).join('')}</ul>${S.emSt ? `<p class="dim" style="font-size:14px">나는 ${S.emSt.ok}개 맞혔어요 (나만 보여요)</p>` : ''}<button class="btn green" data-act="closeem" style="margin-top:8px">계속 건설하기</button></div></div></div>`;
+    ov.innerHTML = `<div class="embody" style="align-items:center"><div><div class="tierbox" style="--tc:${Tn.color}"><div class="dim">긴급 안전 점검 결과 · 학급 정답률</div><div class="acc">${res.acc}%</div><div class="tn">${Tn.name}</div><div style="font-size:22px;font-weight:700">${Tn.title}</div><ul>${GM.tierDesc(res.tier, G(), meta().settings.collapse !== false && G().collapse).map(d => `<li>✦ ${d}</li>`).join('')}</ul>${S.emSt ? `<p class="dim" style="font-size:14px">나는 ${S.emSt.a}문제 중 ${S.emSt.ok}개 맞혔어요 (나만 보여요)</p>` : ''}<button class="btn green" data-act="closeem" style="margin-top:8px">계속 건설하기</button></div></div></div>`;
     if (res.tier === 0) { sx.fanfare(); confetti(140); } else if (res.tier === 1) sx.chest(); else if (res.tier === 3) { W.quake(4); sx.quake(); } else sx.horn();
     setTimeout(() => { const o = $('#emov'); if (o && !S.emActive) o.remove(); }, 9000);
   }
@@ -5757,7 +5757,7 @@ var W = (function () {
     let ov = $('#emov'); if (!ov) { $('#layer').insertAdjacentHTML('beforeend', '<div class="emov" id="emov"></div>'); ov = $('#emov'); }
     if (!$('#emhead')) { ov.innerHTML = '<div class="emhead" id="emhead"></div><div class="embody"><div id="embody"></div></div>'; force = true; }
     const E = S.emSt, now = NET.now(), left = Math.max(0, em.until - now), dots = Array.from({ length: E.a }, (_, i) => `<i class="${i < E.i ? (E.r[i] === '1' ? 'ok' : 'no') : i === E.i ? 'cur' : ''}"></i>`).join('');
-    const head = `<span class="et">🚨 EMERGENCY CHECK</span><div class="pyrprog"><div class="pt"><span>남은 시간</span><b>${fmtT(left)}</b></div><div class="pbar"><i style="width:${left / em.dur * 100}%"></i></div></div><div class="emcount">내 정답 <b>${E.ok}</b>개</div><span class="chip">학급 평균 ${em.prog && em.prog.avg != null ? em.prog.avg : 0}개 · 목표 ${G().emUpN}개↑</span>`;
+    const head = `<span class="et">🚨 EMERGENCY CHECK</span><div class="pyrprog"><div class="pt"><span>남은 시간</span><b>${fmtT(left)}</b></div><div class="pbar"><i style="width:${left / em.dur * 100}%"></i></div></div><div class="emcount">문제 <b>${Math.min(E.i + 1, E.a)}</b>/${E.a}</div><div class="emdots">${dots}</div><span class="chip">학급 정답률 목표 ${G().emUpAcc}%↑ · 못 푼 문제는 오답</span>`;
     if (S.sig.emh !== head) { $('#emhead').innerHTML = head; S.sig.emh = head; }
     const body = $('#embody');
     if (E.i >= E.a) { const sg = 'done' + E.ok; if (S.sig.emb !== sg) { S.sig.emb = sg; body.innerHTML = `<div class="qwait glass" style="min-height:300px"><div class="big">점검 완료!</div><div>${E.a}문제 중 <b>${E.ok}</b>문제 해결 · 친구들을 기다려요<span class="waitdots"></span></div><div class="dim">결과는 학급 전체 정답률로 정해져요</div></div>`; } return; }
@@ -5804,7 +5804,7 @@ var W = (function () {
         <h3>능력치 (레벨 제한 없음)</h3><p>SPEED: 이동 속도 · STRENGTH: 최대 운반량(레벨×${g.carry0}개) + 한 번에 캐고 놓는 블록 수(레벨만큼)</p>
         <h3>헬스장 7등급</h3><p>${GYMS.map(G2 => `${G2.en.replace(' GYM', '')} ×${G2.mult}`).join(' · ')} — 입구 안내판에서 순서대로 이용권을 사요. 한 번 사면 계속 쓸 수 있어요.</p>
         <h3>작업장</h3><p>${free ? 'A 상자를 트럭까지 · B 물건을 알맞은 분리수거 통에 · C 소포를 분홍 빛기둥까지. 같은 일만 계속하면 보상이 줄고, 여러 일을 이어서 하면 연속 보너스!' : '작업대 앞에서 E → 문제를 맞히면 코인을 받아요. 문제를 푸는 동안 캐릭터가 열심히 일해요!'} 헬스장에서 운동해 SPEED·STRENGTH 레벨이 오를수록 작업 보수가 커져요 (레벨 1개당 +10%).</p>
-        <h3>긴급 안전 점검</h3><p>몇 분마다 모두가 동시에 ${free ? '상식 퀴즈' : '문제'}를 1분 동안 최대한 많이 풀어요. 1인당 평균 정답이 많으면 피라미드가 올라가고, 너무 적으면 위쪽 블록이 무너질 수 있어요(아래층은 안전).</p>${CREDIT}`;
+        <h3>긴급 안전 점검</h3><p>몇 분마다 모두가 동시에 ${free ? '상식 퀴즈' : '문제'}를 한 사람당 ${G().emN}문제씩 ${G().emDur}초 안에 풀어요. 학급 전체 정답률이 높으면 피라미드가 올라가고, 낮으면 위쪽 블록이 무너질 수 있어요(아래층은 안전). 못 푼 문제는 오답이고, 아무거나 찍으면 정답률이 떨어져요!</p>${CREDIT}`;
     } else if (k === 'settings') {
       const p = SND.prefs, q = load('pyr_q') || W.quality;
       h = `<div class="ptitle">${IC('gear')} SETTINGS</div><div class="col"><label class="row"><input type="checkbox" data-pref="sfx" ${p.sfx ? 'checked' : ''} style="width:24px;height:24px"> 효과음</label><label class="row"><input type="checkbox" data-pref="bgm" ${p.bgm ? 'checked' : ''} style="width:24px;height:24px"> 배경음악</label>
@@ -5840,9 +5840,9 @@ var W = (function () {
     const tk = newsList(8).map(n => n.text).join('   ✦   ') || '건설자들을 기다리는 중…'; if ($('#tick').textContent !== tk) $('#tick').textContent = tk;
     const em = m.em;
     if (em && em.ph === 'on' && !S.seen['spem:' + em.id]) { S.seen['spem:' + em.id] = 1; if (S.seen.spPrimed) { sx.alarm(); SND.bgm('alarm'); W.quake(1.2); const d = document.createElement('div'); d.className = 'alertban'; d.innerHTML = `<div class="in"><div class="big">🚨 긴급 안전 점검!</div><div class="sm">피라미드의 안정성이 위험합니다! 모든 건설자는 문제에 도전하세요!</div></div>`; document.body.appendChild(d); setTimeout(() => d.remove(), 3000); } }
-    if (em && em.ph === 'on') { const sg = 'emon' + (em.prog ? em.prog.avg : 0) + fmtT(em.until - now); if (S.sig.spem !== sg) { S.sig.spem = sg; $('#layer').innerHTML = `<div class="lobbyban glass" style="top:84px;font-size:24px;border:2px solid var(--red)">🚨 긴급 안전 점검 · <b>${fmtT(em.until - now)}</b> · 1인당 평균 정답 ${em.prog && em.prog.avg != null ? em.prog.avg : 0}개 · 목표 ${G().emUpN}개↑</div>`; } }
+    if (em && em.ph === 'on') { const sg = 'emon' + (em.prog ? em.prog.acc : 0) + fmtT(em.until - now); if (S.sig.spem !== sg) { S.sig.spem = sg; $('#layer').innerHTML = `<div class="lobbyban glass" style="top:84px;font-size:24px;border:2px solid var(--red)">🚨 긴급 안전 점검 · <b>${fmtT(em.until - now)}</b> · 학급 정답률 ${em.prog && em.prog.acc != null ? em.prog.acc : 0}% · 푼 문제 ${em.prog && em.prog.solved != null ? em.prog.solved : 0}/${em.prog && em.prog.tot != null ? em.prog.tot : 0} · 목표 ${G().emUpN}개↑</div>`; } }
     else if (S.sig.spem && S.sig.spem.startsWith('emon')) { S.sig.spem = ''; $('#layer').innerHTML = ''; SND.bgm('desert'); }
-    if (em && em.res && !S.seen['sptier:' + em.id]) { S.seen['sptier:' + em.id] = 1; if (S.seen.spPrimed && now - em.res.at < 20000) { const Tn = GM.EM_TIERS[em.res.tier]; if (em.res.tier === 3) sx.quake(); else sx.fanfare(); banner(`<div class="tierbox" style="--tc:${Tn.color}"><div class="dim">1인당 평균 정답</div><div class="acc">${em.res.avg != null ? em.res.avg : em.res.acc}개</div><div class="tn">${Tn.name}</div><div>${Tn.title}</div></div>`, 6000, { confetti: em.res.tier <= 1 }); } }
+    if (em && em.res && !S.seen['sptier:' + em.id]) { S.seen['sptier:' + em.id] = 1; if (S.seen.spPrimed && now - em.res.at < 20000) { const Tn = GM.EM_TIERS[em.res.tier]; if (em.res.tier === 3) sx.quake(); else sx.fanfare(); banner(`<div class="tierbox" style="--tc:${Tn.color}"><div class="dim">학급 정답률</div><div class="acc">${em.res.acc}%</div><div class="tn">${Tn.name}</div><div>${Tn.title}</div></div>`, 6000, { confetti: em.res.tier <= 1 }); } }
     const ev = m.ev; if (ev && !S.seen['spev:' + ev.id]) { S.seen['spev:' + ev.id] = 1; if (S.seen.spPrimed && ev.until > now) { const E = GM.EVENTS[ev.type]; sx.horn(); banner(`${IC('star', 'huge')}<div class="big">${E.name}</div><div class="sm">${FREE() ? freeEvDesc(ev.type) : E.desc}</div>`, 4200, { confetti: true }); } }
     if (m.status === 'ended' && !S.seen.spFinal) { S.seen.spFinal = 1; if (m.result === 'win') { SND.bgm('win'); sx.fanfare(); confetti(200); } if (m.result !== 'win') setTimeout(() => { const l = $('#layer'); if (l) l.innerHTML = `<div class="final3">${finalPanelHTML('spectator')}</div>`; }, 1500); }
     S.seen.spPrimed = 1;
@@ -5851,7 +5851,7 @@ var W = (function () {
   /* ================= 최종 결과 ================= */
   function finalPanelHTML(who) {
     const r = S.room, m = r.meta, s = r.stats || {}, b = r.build || {}, win = m.result === 'win' || (b.n || 0) >= m.total, pct = Math.floor((b.n || 0) / m.total * 100), free = FREE();
-    const hist = free ? '' : Object.values(m.emHist || {}).sort((a, c) => a.at - c.at).map((h, i) => `<span style="background:${GM.EM_TIERS[h.tier].color}">${i + 1}차 점검 평균 ${h.avg != null ? h.avg : h.acc}개 · ${GM.EM_TIERS[h.tier].name}</span>`).join('');
+    const hist = free ? '' : Object.values(m.emHist || {}).sort((a, c) => a.at - c.at).map((h, i) => `<span style="background:${GM.EM_TIERS[h.tier].color}">${i + 1}차 점검 정답률 ${h.acc}% · ${GM.EM_TIERS[h.tier].name}</span>`).join('');
     const ps = GM.players(r), el = m.startAt ? GM.elapsed(m) : 0;
     let mine = '';
     if (who === 'student' && S.priv) { const st = S.priv.st || {}; mine = `<div class="panel" style="margin:10px auto;max-width:640px"><div class="ptitle" style="justify-content:center">${IC('user')} 나의 기록 <small class="dim" style="font-family:var(--font);font-size:13px">(나만 보여요)</small></div><div class="resrow"><span>${IC('block')}<b>${st.placed || 0}</b><small>쌓은 블록</small></span>${free ? `<span>${IC('coin')}<b>${st.coins || 0}</b><small>번 코인</small></span>` : `<span>${IC('check')}<b>${st.ok || 0}</b><small>해결한 문제</small></span>`}</div><div class="statline" style="justify-content:center">${GROW.STAT_IDS.map(k => `<span style="color:${STAT_COL[k]}">${ST[k].en} Lv.${myLv(k).lv}</span>`).join('')}</div></div>`; }
